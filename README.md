@@ -1,8 +1,8 @@
-![](https://github.com/Bruce-Hopkins/code-editor-prototype/blob/main/images/screenshot.png?raw=true)
-
 # Code Editor Prototype
 
 Currently, this editor is in pre-alpha. Missing features and bugs are expected.
+
+![](https://github.com/Bruce-Hopkins/code-editor-prototype/blob/main/images/screenshot.png?raw=true)
 
 ## Description
 
