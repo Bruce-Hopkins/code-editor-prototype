@@ -1,3 +1,5 @@
+![](https://github.com/Bruce-Hopkins/code-editor-prototype/blob/main/images/screenshot.png?raw=true)
+
 # Code Editor Prototype
 
 Currently, this editor is in pre-alpha. Missing features and bugs are expected.
@@ -19,6 +21,13 @@ cargo run --release
 ```
 
 To receive diagnostics from rust analyzer, install the rust analyzer binary to your $PATH with [these instructions](https://rust-analyzer.github.io/manual.html#rust-analyzer-language-server-binary).
+
+## Usage
+
+- Type `ctrl/command+o` to open a new folder
+- Type `ctrl/command+p` to open a new file
+- Type `ctrl/command+s` to save the opened file
+- Type `ctrl/command+l` to display the error of the diagnostic over the cursor. (You can also just click on the diagnostic)
 
 ## Todo
 

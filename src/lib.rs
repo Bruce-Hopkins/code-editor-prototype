@@ -486,7 +486,7 @@ impl Editor {
                         text("Welcome to the prototype!")
                     ).padding(padding),
                     container(
-                        text("Use the keyboard command ctrl+o") 
+                        text("Use the keyboard command ctrl/command+o to open a new folder") 
                     )
                 ).align_items(iced::alignment::Alignment::Center)
                 
