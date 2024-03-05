@@ -294,7 +294,7 @@ impl Textbox {
         self.buffer.correct_position_to_cursor(text_width,longest_line)
     }
 
-    pub fn set_size(&mut self, height: f32, width: f32) {
+    pub fn set_size(&mut self, width: f32, height: f32) {
         self.buffer.window.set_size(width, height)
     }
 
