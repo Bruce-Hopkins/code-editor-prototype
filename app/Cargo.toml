@@ -1,9 +1,5 @@
-[workspace]
-members = ["core", "app"]
-default-members = ["app"]
-
 [package]
-name = "alchemy_editor"
+name = "app"
 version = "0.1.0"
 edition = "2021"
 
