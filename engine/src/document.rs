@@ -1,12 +1,12 @@
-use std::io::Error;
 use std::path::PathBuf;
 use rfd::FileDialog;
-use ropey::{Rope, RopeSlice};
+use ropey::{Rope, RopeBuilder, RopeSlice};
 use ropey::iter::Lines;
 use std::fs::{self, File};
 use std::io::{BufReader, BufWriter};
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::errors::EngineErrors;
 use crate::position::Position;
 use crate::selection::Range;
 
@@ -28,22 +28,29 @@ impl DocumentChange {
     }
 }
 
-pub fn file_path(relative_path: &str) -> String {
+pub fn file_path(relative_path: &str) -> Result<String, EngineErrors> {
     let path = PathBuf::from(relative_path);
-    let absolute_path = fs::canonicalize(path).unwrap();
-
-    format!("file://{}", absolute_path.to_str().unwrap())
+    let absolute_path = fs::canonicalize(path).map_err(EngineErrors::from_file_error("Get full file path"))?;
+    let absolute_path = match absolute_path.to_str() {
+        Some(value) => value,
+        None => return Err(EngineErrors::InvalidString("Provided path is not valid unicode".to_owned())),
+    };
+    Ok(
+        format!("file://{}", absolute_path)
+    )
 } 
 pub struct ByteRange  {
     pub start: usize,
     pub end: usize
 }
 
+#[derive(Debug)]
 pub struct FileData {
     name: String,
     uri: String
 }
 
+#[derive(Debug)]
 pub struct Document {
     rope: Rope,
     file_data: Option<FileData>,
@@ -53,6 +60,14 @@ pub struct Document {
 impl ToString for Document {
     fn to_string(&self) -> String {
         self.rope.to_string()
+    }
+}
+
+impl From<&str> for Document {
+    fn from(value: &str) -> Self {
+        let mut rope = RopeBuilder::new();
+        rope.append(value);
+        Document { rope:rope.finish(), file_data: None, is_saved: true }
     }
 }
 
@@ -70,11 +85,14 @@ impl Document {
         self.rope.slice(..)
     }
 
-    pub fn open(filename: &str) -> Result<Self, Error> {
-        let file = File::open(filename)?;
-        let rope = Rope::from_reader(BufReader::new(file))?;
+    pub fn open(filename: &str) -> Result<Self, EngineErrors> {
+        let file = File::open(filename)
+        .map_err(EngineErrors::from_file_error("Open File"))?;
 
-        let uri = file_path(filename);
+        let rope = Rope::from_reader(BufReader::new(file))
+        .map_err(EngineErrors::from_file_error("Open file to rope"))?;
+
+        let uri = file_path(filename)?;
         let file_data = FileData {
             name:filename.to_owned(),
             uri,
@@ -95,32 +113,27 @@ impl Document {
         }
     }
 
-    pub fn save(&mut self, workspace: Option<String>) -> Result<(), Error> {
-        let mut dialog = FileDialog::new();
+    pub fn save(&mut self) -> Result<(), EngineErrors> {
         let filename = match self.filename() {
             Some(value) => value.to_owned(),
-            None => {
-                // Let the user select the save path
-                if let Some(workspace) = workspace {
-                    dialog = dialog.set_directory(workspace);
+            None => return Err(
+                EngineErrors::FileError { 
+                    operation_name: "Save File".to_owned(), 
+                    explaination: "File path not set.".to_owned()
                 }
-                let path = dialog
-                    .save_file()
-                    .unwrap();
-
-                path.to_str()
-                    .unwrap()
-                    .to_owned()
-            }
+            )
         };
 
-        let file = File::create(filename.clone())?;
-        self.rope.write_to(BufWriter::new(file)).expect("Failed to save file");
+        let file = File::create(filename.clone())
+        .map_err(EngineErrors::from_file_error("Open file"))?;
+
+        self.rope.write_to(BufWriter::new(file))
+        .map_err(EngineErrors::from_file_error("Save File"))?;
         self.is_saved = true;
 
         if let None = self.file_data {
             self.file_data = Some (
-                FileData { name:filename.clone(), uri: file_path(&filename)}
+                FileData {uri: file_path(&filename)?, name:filename }
             )
         }
         Ok(())
@@ -130,8 +143,14 @@ impl Document {
         self.rope.lines()
     }
 
-    pub fn get_character_pos(&self, position: &Position) -> usize {
-        self.rope.line_to_char(position.line) + position.character
+    pub fn get_character_pos(&self, position: &Position) -> Option<usize> {
+        let result = self
+        .rope
+        .try_line_to_char(position.line);
+        match result {
+            Ok(character_pos) => return Some(character_pos.saturating_add(position.character)),
+            Err(_) => None,
+        }
     }
 
     pub fn str_from_range(&self, start: usize, end: usize) -> RopeSlice<'_> {
@@ -176,7 +195,7 @@ impl Document {
     /**
      * Replaces the strings within the range of the position with the character inputted
      */
-    pub fn replace(&mut self, start_idx: &Position, end_idx: &Position, character: String) -> Option<ByteRange> {
+    pub fn replace(&mut self, start_idx: &Position, end_idx: &Position, character: String) -> Result<Option<ByteRange>, EngineErrors> {
         let result = self.delete(start_idx, end_idx);
         self.insert(start_idx, character);
         result
@@ -185,25 +204,59 @@ impl Document {
     /**
      * Returns the byte that was the starting position of the insert
      */
-    pub fn insert(&mut self, position: &Position, character: String) -> usize {
-        let start_idx = self.get_character_pos(position);
+    pub fn insert(&mut self, position: &Position, character: String) -> Option<usize> {
+        let start_idx = self.get_character_pos(position)?;
         self.rope.insert(start_idx, &character.to_string());
         self.is_saved = false;
-        start_idx
+        Some(start_idx)
     }
 
     /**
-     * Returns the byte that was the starting position of the insert
+     * Returns the byte that was the starting position of the insert.
+     * 
+     * 
      */
-    pub fn delete(&mut self, start_idx: &Position, end_idx: &Position) -> Option<ByteRange> {
-        let start_line = self.rope.get_line(start_idx.line).unwrap();
-        let start_idx = self.get_character_pos(start_idx);
-        let end_idx = self.get_character_pos(end_idx);
-        if start_line.len_chars() != 0 && end_idx <= self.rope.len_bytes() {
+    pub fn delete(&mut self, start_pos: &Position, end_pos: &Position) -> Result<Option<ByteRange>, EngineErrors> {
+
+        let start_line = match self.rope.get_line(start_pos.line) {
+            Some(value) => value,
+            None => return Ok(None),
+        };
+        let start_idx = self.get_character_pos_or_end_of_rope(start_pos);
+        let end_idx = self.get_character_pos_or_end_of_rope(end_pos);
+
+        if start_idx > end_idx {
+            return Err(
+                EngineErrors::InvalidPosition { 
+                    operation_name: "Delete".to_owned(), 
+                    explaination: "Start index is greater than end index".to_owned() 
+                }
+            )
+        }
+
+        if start_line.len_chars() != 0 && start_idx != end_idx {
             self.rope.remove(start_idx..end_idx);
             self.is_saved = false;
-            return Some(ByteRange{start: start_idx, end: end_idx});
+            return Ok(Some(ByteRange{start: start_idx, end: end_idx}));
         }
-        None
+        Ok(None)
+    }
+
+    /**
+     * Gets the passed character position. If the position doesn't exist then it will return the total bytes of the 
+     * rope.
+     */
+    fn get_character_pos_or_end_of_rope(&self, pos: &Position) -> usize{
+        if let Some(pos) = self.get_character_pos(pos) {
+            let end_of_rope = self.rope.len_bytes();
+            if pos > end_of_rope {
+                end_of_rope
+            }
+            else {
+                pos
+            }
+        } else {
+            self.rope.len_bytes()
+        }
     }
 }

@@ -1,9 +1,10 @@
-use crate::{document::{self, Document}, selection::Selection, tab::Tab, Cursor};
+use crate::{document::Document, position::Cursor, selection::Selection, tab::Tab};
 
 pub struct Buffer {
     document: Document,
     cursor: Cursor,
     selection: Selection,
+    // window_height: usize
 }
 
 impl Buffer {
@@ -27,8 +28,8 @@ impl Buffer {
 
     }
 
-    pub fn insert(&mut self) {
-
+    pub fn insert(&mut self, value: String) {
+        
     }
 
     pub fn get_selected(&self) -> String {

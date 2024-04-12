@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, document::Document, selection::{self, Selection}, Cursor};
+use crate::{buffer::Buffer, document::Document, position::Cursor, selection::{self, Selection}};
 
 pub struct Tab {
     document: Document,
