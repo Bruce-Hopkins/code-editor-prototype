@@ -197,16 +197,25 @@ impl Document {
      */
     pub fn replace(&mut self, start_idx: &Position, end_idx: &Position, character: String) -> Result<Option<ByteRange>, EngineErrors> {
         let result = self.delete(start_idx, end_idx);
-        self.insert(start_idx, character);
+        if let Ok(value) = result.as_ref() {
+            if value.is_some() {
+                self.insert(start_idx, character);
+            }
+        }
         result
     }
 
     /**
      * Returns the byte that was the starting position of the insert
+     * 
+     * Returns `None` if the position passed doesn't exist.
      */
     pub fn insert(&mut self, position: &Position, character: String) -> Option<usize> {
         let start_idx = self.get_character_pos(position)?;
-        self.rope.insert(start_idx, &character.to_string());
+        if start_idx > self.rope.len_bytes() {
+            return None
+        }
+        self.rope.insert(start_idx, &character);
         self.is_saved = false;
         Some(start_idx)
     }
@@ -214,7 +223,10 @@ impl Document {
     /**
      * Returns the byte that was the starting position of the insert.
      * 
+     * If the start value is greater than the max position in the document, then it will return `None`
      * 
+     * If the end value passed is greater than the existing values in the document, then it will delete up until the 
+     * end.     
      */
     pub fn delete(&mut self, start_pos: &Position, end_pos: &Position) -> Result<Option<ByteRange>, EngineErrors> {
 
@@ -222,7 +234,10 @@ impl Document {
             Some(value) => value,
             None => return Ok(None),
         };
-        let start_idx = self.get_character_pos_or_end_of_rope(start_pos);
+        let start_idx = match self.get_character_pos(start_pos) {
+            Some(value) => value,
+            None => return Ok(None),
+        };
         let end_idx = self.get_character_pos_or_end_of_rope(end_pos);
 
         if start_idx > end_idx {

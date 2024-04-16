@@ -77,4 +77,42 @@ mod document_tests {
         );
         assert!(result.is_err());
     }
+
+    #[test]
+    fn document_insert() {
+        let mut document = Document::from("one\ntwo\nthree");
+        let result = document.insert(
+            &Position::new(2,5), 
+            "\nfour".to_owned()
+        );
+        assert!(result.is_some());
+        assert_eq!(document.to_string(), "one\ntwo\nthree\nfour")
+    }
+
+    #[test]
+    fn document_insert_fail() {
+        let mut document = Document::from("one\ntwo\nthree");
+        let result = document.insert(
+            &Position::new(3,6), 
+            "\nfour".to_owned()
+        );
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn document_insert_replace() {
+        let mut document = Document::from("one\ntwo\nthree");
+        let result = document.replace(
+            &Position::new(1,0), 
+            &Position::new(1,3), 
+            "2".to_owned()
+        );
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(result.is_some());
+
+        assert_eq!(document.to_string(), "one\n2\nthree")
+        
+    }
+
 }
