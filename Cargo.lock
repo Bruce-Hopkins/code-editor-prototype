@@ -507,6 +507,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "core-lib"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lsp-types",
+ "pretty_assertions",
+ "rfd",
+ "ropey",
+ "rustc-hash",
+ "thiserror",
+ "tree-sitter",
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "cosmic-text"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -646,21 +661,6 @@ name = "either"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
-
-[[package]]
-name = "engine"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "lsp-types",
- "pretty_assertions",
- "rfd",
- "ropey",
- "rustc-hash",
- "thiserror",
- "tree-sitter",
- "unicode-segmentation",
-]
 
 [[package]]
 name = "equivalent"

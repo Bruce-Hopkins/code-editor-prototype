@@ -1,5 +1,5 @@
 [workspace]
-members = ["engine", "application"]
+members = ["core-lib", "application"]
 # default-members = ["app"]
 
 [[bin]]
