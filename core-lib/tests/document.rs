@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod document_tests {
-    use engine::{document::{self, Document}, position::Position};
+    use core_lib::{document::{self, Document}, position::Position};
     use pretty_assertions::{assert_eq, assert_ne};
 
     #[test]

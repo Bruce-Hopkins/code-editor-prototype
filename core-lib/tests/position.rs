@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod position_test {
-    use engine::position::Position;
+    use core_lib::position::Position;
     #[test]
     fn position_gt() {
         let position = Position {line: 4, character:35};
