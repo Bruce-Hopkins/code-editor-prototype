@@ -84,9 +84,9 @@ impl HighlighterConfig {
 }
 
 #[derive(Debug, Clone)]
-pub struct HighlightItem {
-    pub capture_name: String,
-    pub kind: String,
+pub struct HighlightItem<'tree> {
+    pub capture_name: &'tree str,
+    pub kind: &'tree str,
     pub range: Range,
 }
 
@@ -144,21 +144,20 @@ impl<'tree> HighlightIter<'tree> {
 }
 
 impl <'tree> Iterator for HighlightIter<'tree> {
-    type Item = HighlightItem;
+    type Item = HighlightItem<'tree>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut capture: Option<&QueryCapture<'tree>> = None;
         loop {
             if let Some(query_match) = self.query_match.as_ref() {
-                if let Some(value) = query_match.captures.get(dbg!(self.capture_num)) {
-                    self.capture_num += 1;
-                    dbg!(self.capture_num);
-                    capture = Some(dbg!(value));
+                if let Some(value) = query_match.captures.get(self.capture_num) {
+                    self.capture_num = self.capture_num.saturating_add(1);
+                    capture = Some(value);
                 } else {
                     // We try to get the next query_match
                     if let Some((cap, _i)) = self.query_captures.next() {
-                        self.capture_num = dbg!(0);
-                        self.query_match = Some(dbg!(cap));
+                        self.capture_num = 0;
+                        self.query_match = Some(cap);
                         continue;
                     }
                 } 
@@ -168,8 +167,8 @@ impl <'tree> Iterator for HighlightIter<'tree> {
         }
         capture.map(|cap| {
             HighlightItem {
-                capture_name: self.capture_names.get(cap.index as usize).unwrap().to_string(),
-                kind: cap.node.kind().to_string(),
+                capture_name: &self.capture_names.get(cap.index as usize).unwrap(),
+                kind: &cap.node.kind(),
                 range: cap.node.range(),
             }
         })

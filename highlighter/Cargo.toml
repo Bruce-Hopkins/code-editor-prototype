@@ -3,10 +3,18 @@ name = "highlighter"
 version = "0.1.0"
 edition = "2021"
 
+[[bench]]
+name = "my_benchmark"
+harness = false
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 ropey = {workspace = true}
 tree-sitter = "0.20.10"
 tree-sitter-rust = "0.20.3"
+
+[dev-dependencies]
 pretty_assertions = {workspace = true}
+criterion = {workspace = true}
+
