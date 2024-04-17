@@ -582,6 +582,7 @@ name = "core-lib"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "highlighter",
  "lsp-types",
  "pretty_assertions",
  "rfd",

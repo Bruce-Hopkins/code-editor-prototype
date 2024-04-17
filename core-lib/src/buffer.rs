@@ -1,9 +1,12 @@
-use crate::{document::Document, position::Cursor, selection::Selection, tab::Tab};
+use highlighter::highlighter::HighlighterConfig;
+
+use crate::{document::Document, position::{Cursor, CursorList}, selection::{Selection, SelectionList}, tab::Tab};
 
 pub struct Buffer {
     document: Document,
-    cursor: Cursor,
-    selection: Selection,
+    selections: SelectionList,
+    cursors: CursorList,
+    highlighter: Option<HighlighterConfig>,
     // window_height: usize
 }
 
@@ -11,21 +14,23 @@ impl Buffer {
     pub fn open(file: &str) -> Self {
         Self {
             document: Document::open(file).unwrap(),
-            cursor: Cursor::default(),
-            selection: Selection::default()
+            cursors: CursorList::default(),
+            selections: SelectionList::default(),
+            highlighter: None
         }
     }
 
-    pub fn new(document: Document, cursor: Cursor, selection: Selection) -> Self {
+    pub fn new(document: Document, cursors: CursorList, selections: SelectionList) -> Self {
         Self {
             document,
-            cursor,
-            selection
+            selections,
+            cursors,
+            highlighter: None
         }
     }
 
     pub fn delete(&mut self) {
-
+        
     }
 
     pub fn insert(&mut self, value: String) {
@@ -64,6 +69,6 @@ impl Buffer {
 
 impl From<Buffer> for Tab {
     fn from(value: Buffer) -> Self {
-        Tab::new(value.document, value.cursor)
+        Tab::new(value.document, value.cursors, value.selections)
     }
 }

@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use highlighter::{highlighter::{Highlighter, HighlighterConfig} };
+use highlighter::highlighter::{Highlighter, HighlighterConfig};
 
 fn bench(c: &mut Criterion) {
 //     let document = Document::open("./test-dir/src/main.rs").expect("Couldn't open file");

@@ -123,3 +123,26 @@ impl Into<lsp_types::Range> for Range {
         }
     }
 }
+#[derive(Debug, Clone, Default)]
+pub struct SelectionList {
+    main: Selection,
+    list: Vec<Selection>,
+}
+
+impl SelectionList {
+    pub fn add(&self) {
+
+    }
+
+    pub fn get_all() {
+
+    }
+
+    /**
+     * Clears the selection to the entered position.
+     */
+    pub fn clear(&mut self, pos: Position) {
+        self.main = Selection(Range { start: pos, end: pos });
+        self.list.truncate(0)
+    }
+}
