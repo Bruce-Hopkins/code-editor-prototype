@@ -1,5 +1,5 @@
 [workspace]
-members = ["core-lib", "application"]
+members = ["core-lib", "application", "highlighter"]
 # default-members = ["app"]
 
 [[bin]]
@@ -30,3 +30,4 @@ rfd = "0.12.1"
 rustc-hash = "1.1.0"
 thiserror = "1.0.58"
 anyhow = "1.0.82"
+ropey = "1.6.0"
