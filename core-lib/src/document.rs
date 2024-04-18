@@ -195,11 +195,13 @@ impl Document {
     /**
      * Replaces the strings within the range of the position with the character inputted
      */
-    pub fn replace(&mut self, start_idx: &Position, end_idx: &Position, character: String) -> Result<Option<ByteRange>, EngineErrors> {
-        let result = self.delete(start_idx, end_idx);
+    pub fn replace(&mut self, range: &Range, character: String) -> Result<Option<ByteRange>, EngineErrors> {
+        let start_pos = &range.start();
+
+        let result = self.delete(range);
         if let Ok(value) = result.as_ref() {
             if value.is_some() {
-                self.insert(start_idx, character);
+                self.insert(start_pos, character);
             }
         }
         result
@@ -228,7 +230,9 @@ impl Document {
      * If the end value passed is greater than the existing values in the document, then it will delete up until the 
      * end.     
      */
-    pub fn delete(&mut self, start_pos: &Position, end_pos: &Position) -> Result<Option<ByteRange>, EngineErrors> {
+    pub fn delete(&mut self, range: &Range) -> Result<Option<ByteRange>, EngineErrors> {
+        let start_pos = &range.start();
+        let end_pos = &range.end();
 
         let start_line = match self.rope.get_line(start_pos.line) {
             Some(value) => value,

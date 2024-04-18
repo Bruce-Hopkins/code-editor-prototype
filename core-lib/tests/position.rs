@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod position_test {
     use core_lib::position::Position;
+    
     #[test]
-    fn position_gt() {
+    fn position_should_be_gt() {
         let position = Position {line: 4, character:35};
         
         assert!(position > Position{line:3, character:36});
@@ -15,7 +16,7 @@ mod position_test {
     }
 
     #[test]
-    fn position_lt() {
+    fn position_should_be_lt() {
         let position = Position {line: 4, character:35};
         
         assert!(position < Position{line:4, character:36});

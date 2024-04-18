@@ -2,7 +2,7 @@ use std::mem::swap;
 
 use super::position::{Position};
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, Eq, PartialEq)]
 /**
     A struct to represent the selections within the document.
 
@@ -12,12 +12,53 @@ pub struct Selection(Range);
 
 
 impl Selection {
-    pub fn start(&self) -> &Position {
-        &self.0.start
+
+    pub fn new(pos: Position) -> Self {
+        Selection(Range::new(pos, pos))
     }
 
-    pub fn end(&self) -> &Position {
-        &self.0.end
+    /**
+     * Get's the end of range, which will represent the cursor
+     */
+    pub fn end(&self) -> Position {
+        self.0.end
+    }
+
+    fn set_character(&mut self, value: usize) {
+        self.0.start.character = value;
+        self.0.end.character = value;
+    }
+
+    fn set_line(&mut self, value: usize) {
+        self.0.start.line = value;
+        self.0.end.line = value;
+    }
+
+    pub fn move_cursor_horizontally(&mut self, distance: isize) {
+        if distance.is_positive() {
+            self.set_character(self.0.end.character.saturating_add(distance as usize));
+        } else {
+            self.set_character(self.0.end.character.saturating_sub(distance.abs() as usize));
+        }
+    }
+
+    pub fn move_cursor_vertically(&mut self, distance: isize) {
+        if distance.is_positive() {
+            self.set_line(self.0.end.line.saturating_add(distance as usize));
+        } else {
+            self.set_line(self.0.end.line.saturating_sub(distance.abs() as usize))
+        }
+    }
+
+    pub fn move_cursor_to_end_of_insert(&mut self, insert: &str) {
+        let insertion_position = Position::end_of_insert(insert);
+        self.0.start = self.0.start.move_by(insertion_position);
+        self.0.end = self.0.end.move_by(insertion_position);
+
+    }
+
+    pub fn selection_start(&self) -> &Position {
+        &self.0.start
     }
 
     /*
@@ -30,15 +71,16 @@ impl Selection {
     /**
         Sets the start positions of the selection.
      */
-    pub fn set_start(&mut self, pos: Position) {
-        self.0 = Range::new(pos, self.0.end());
+    pub fn move_selection(&mut self, pos: Position) {
+        self.0.start = pos;
     }
 
     /**
         Sets the end position of the selection. 
      */
-    pub fn set_end(&mut self, pos: Position) {
-        self.0 = Range::new(self.0.start(), pos);
+    pub fn set_cursor(&mut self, pos: Position) {
+        self.0.end = pos;
+        self.0.start = pos;
     }
 
 
@@ -46,7 +88,7 @@ impl Selection {
      Checks if the position passed is within the bounds of the start and end position
      */
     pub fn is_within(&self, pos: &Position) -> bool {
-        pos >= &self.start() && pos < &self.end()
+        pos >= &self.selection_start() && pos < &self.end()
     }
 
     /**
@@ -54,12 +96,12 @@ impl Selection {
       
      If the start pos is greater than the end, it will swap the values
      */
-    pub fn correct_position(&self) -> Self {
-        let mut new_selection = *self;
-        if new_selection.start() > new_selection.end() {
-            swap(&mut new_selection.0.start, &mut new_selection.0.end)
+    pub fn range(&self) -> Range {
+        let mut new_range = self.0;
+        if &new_range.start() > &new_range.end() {
+            swap(&mut new_range.start, &mut new_range.end)
         }
-        new_selection
+        new_range
     }
 
     /**
@@ -72,9 +114,11 @@ impl Selection {
         self.0.start = position;
         self.0.end = position;
     }
+
+    
 }
 
-#[derive(Debug, Clone, Default, Copy)]
+#[derive(Debug, Clone, Default, Copy, Eq, PartialEq)]
 pub struct Range {
     start: Position,
     end: Position,
@@ -102,13 +146,6 @@ impl Range {
 
 }
 
-impl From<Selection> for Range {
-    fn from(val: Selection) -> Self {
-        let selection = val.correct_position();
-        selection.0
-    }
-}
-
 impl From<lsp_types::Range> for Range {
     fn from(value: lsp_types::Range) -> Self {
         Self { start: Position::from(value.start), end: Position::from(value.end) }
@@ -123,26 +160,31 @@ impl Into<lsp_types::Range> for Range {
         }
     }
 }
-#[derive(Debug, Clone, Default)]
-pub struct SelectionList {
-    main: Selection,
-    list: Vec<Selection>,
-}
+// TODO, can this be a binary heap instead?
+#[derive(Default, Clone, Debug)]
+
+pub struct SelectionList(Vec<Selection>); 
 
 impl SelectionList {
-    pub fn add(&self) {
 
-    }
-
-    pub fn get_all() {
-
+        /**
+     * Maintains a sorted list of cursor and adds a new cursor into the mix.
+     */
+    pub fn add(&mut self, new_cursor: Position) {
+        self.0.push(Selection::new(new_cursor));
     }
 
     /**
-     * Clears the selection to the entered position.
+     * Sorts the selections in largest to smallest and returns the result.
      */
-    pub fn clear(&mut self, pos: Position) {
-        self.main = Selection(Range { start: pos, end: pos });
-        self.list.truncate(0)
+    pub fn get_all(&self) -> Vec<Selection> {
+        let mut selections = self.0.clone(); 
+        selections.sort_by(|a, b| b.0.start.cmp(&a.0.start));
+        selections
     }
+
+    pub fn clear(&mut self) {
+        self.0.truncate(0);
+    }
+
 }
