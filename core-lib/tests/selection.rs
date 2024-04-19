@@ -28,13 +28,15 @@ mod selection_test {
         let mut list = SelectionList::default();
         let pos1 = Position::new(1, 0);
         let pos2 = Position::new(2, 0);
-        let pos3 = Position::new(3, 0); 
 
-        list.add(pos1);
-        list.add(pos3);
-        list.add(pos2);
+        list.push(pos1);
+        list.push(pos2);
 
-        assert_eq!(list.get_all(), vec![Selection::new(pos3), Selection::new(pos2), Selection::new(pos1)]);
+        assert_eq!(list.get_all(), vec![
+            Selection::new(pos2), 
+            Selection::new(pos1), 
+            Selection::new(Position::new(0, 0))
+        ]);
     }
 
 

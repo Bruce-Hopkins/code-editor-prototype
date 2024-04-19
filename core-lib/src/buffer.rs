@@ -1,12 +1,19 @@
 use highlighter::highlighter::HighlighterConfig;
 
-use crate::{document::Document, position::Position, selection::{Range, SelectionList}};
+use crate::{document::Document, position::Position, selection::{Range, Selection, SelectionList}};
 
+#[derive(Default)]
 pub struct Buffer {
     document: Document,
     selections: SelectionList,
     highlighter: Option<HighlighterConfig>,
     // window_height: usize
+}
+
+impl ToString for Buffer {
+    fn to_string(&self) -> String {
+        self.document.to_string()
+    }
 }
 
 enum DocumentChange {
@@ -21,14 +28,6 @@ impl Buffer {
         Self {
             document: Document::open(file).unwrap(),
             selections: SelectionList::default(),
-            highlighter: None
-        }
-    }
-
-    pub fn new(document: Document, selections: SelectionList) -> Self {
-        Self {
-            document,
-            selections,
             highlighter: None
         }
     }
@@ -52,12 +51,21 @@ impl Buffer {
 
     pub fn delete(&mut self) {
         for selection in self.selections.get_all() {
-            let document_change = DocumentChange::Delete(selection.range());
+            let mut range = selection.range();
+            if range.is_same() {
+                range = Range::new(range.start(), Position::new(range.end().line, range.end().character + 1) )
+            }
+            let document_change = DocumentChange::Delete(range);
             self.doc_change(document_change);
         }
     }
 
-    pub fn insert(&mut self, value: String) {
+    /**
+     * Inserts the passed text into all of the selections and cursors
+     */
+    pub fn insert<T>(&mut self, value: &T)
+    where T: ToString + 'static {
+        let value = value.to_string();
         for selection in self.selections.get_all() {
             if selection.is_empty() {
                 let document_change = DocumentChange::Insert(value.clone(), selection.end());
@@ -72,9 +80,17 @@ impl Buffer {
         }
     }
 
-    pub fn get_selected(&self) -> String {
-        String::new()
+    /**
+     * Returns a vector of selections
+     */
+
+    pub fn get_selection(&self) -> Vec<Selection> {
+        self.selections.get_all()
     }
+
+    // pub fn get_selected(&self) -> String {
+    //     String::new()
+    // }
 
     pub fn copy(&mut self) {
 
@@ -88,8 +104,27 @@ impl Buffer {
 
     }
 
-    pub fn move_cursor(&mut self) {
-        // All movement subcribers can be notified here.
+    /**
+     * Moves one cursor to the selected location.
+     * 
+     * If there are any selections, it will delete those selections.
+     */
+    pub fn move_cursor(&mut self, pos: Position) {
+        self.selections.replace_cursor(pos);
+    }
+
+    /**
+     * Moves the selection of the last moved cursor. 
+     * */ 
+    pub fn move_selection(&mut self, pos: Position) {
+        self.selections.move_selection(pos)
+    }
+
+    /**
+     * Adds a new cursor with the given position.
+     */
+    pub fn add_cursor(&mut self, pos: Position) {
+        self.selections.push(pos);
     }
 
     pub fn get_line_len(&self) {

@@ -72,7 +72,7 @@ impl Selection {
         Sets the start positions of the selection.
      */
     pub fn move_selection(&mut self, pos: Position) {
-        self.0.start = pos;
+        self.0.start = dbg!(pos);
     }
 
     /**
@@ -144,6 +144,13 @@ impl Range {
         self.end
     }
 
+    /**
+     * Returns true if the start and end values in the range are the same
+     */
+    pub fn is_same(&self) -> bool {
+        self.start == self.end
+    }
+
 }
 
 impl From<lsp_types::Range> for Range {
@@ -161,16 +168,22 @@ impl Into<lsp_types::Range> for Range {
     }
 }
 // TODO, can this be a binary heap instead?
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 
-pub struct SelectionList(Vec<Selection>); 
+pub struct SelectionList(Vec<Selection>);
+
+impl Default for SelectionList { 
+    fn default() -> Self {
+        Self(vec![Selection::default()])
+    }
+}
 
 impl SelectionList {
 
         /**
      * Maintains a sorted list of cursor and adds a new cursor into the mix.
      */
-    pub fn add(&mut self, new_cursor: Position) {
+    pub fn push(&mut self, new_cursor: Position) {
         self.0.push(Selection::new(new_cursor));
     }
 
@@ -183,8 +196,22 @@ impl SelectionList {
         selections
     }
 
+    /**
+     * Moves the selection of the last created cursor 
+     */
+    pub fn move_selection(&mut self, pos: Position) {
+        // The selection list should always have one element inside of it
+        let last_selection_pos = self.0.len().saturating_sub(1);
+        self.0[last_selection_pos].move_selection(pos);
+    }
+
     pub fn clear(&mut self) {
+        self.0.truncate(1);
+    }
+
+    pub fn replace_cursor(&mut self, pos: Position) {
         self.0.truncate(0);
+        self.push(pos);
     }
 
 }

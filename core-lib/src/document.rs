@@ -50,7 +50,7 @@ pub struct FileData {
     uri: String
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Document {
     rope: Rope,
     file_data: Option<FileData>,
@@ -231,8 +231,8 @@ impl Document {
      * end.     
      */
     pub fn delete(&mut self, range: &Range) -> Result<Option<ByteRange>, EngineErrors> {
-        let start_pos = &range.start();
-        let end_pos = &range.end();
+        let start_pos = &dbg!(range.start());
+        let end_pos = &dbg!(range.end());
 
         let start_line = match self.rope.get_line(start_pos.line) {
             Some(value) => value,
