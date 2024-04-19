@@ -72,7 +72,7 @@ impl Selection {
         Sets the start positions of the selection.
      */
     pub fn move_selection(&mut self, pos: Position) {
-        self.0.start = dbg!(pos);
+        self.0.start = pos;
     }
 
     /**

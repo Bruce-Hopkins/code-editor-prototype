@@ -38,6 +38,7 @@ mod buffer_tests {
     fn should_delete_at_selection() {
         let mut buffer = Buffer::default();
         buffer.insert(&"123");
+        buffer.move_cursor(Position::new(0, 0));
         buffer.move_selection(Position::new(0, 3));
         buffer.delete();
 
@@ -48,6 +49,7 @@ mod buffer_tests {
     fn should_insert_with_multiple_cursor() {
         let mut buffer = Buffer::default();
         buffer.insert(&"123\n456\n789");
+        buffer.move_cursor(Position::new(0, 0));
         buffer.add_cursor(Position::new(1, 0));
         buffer.add_cursor(Position::new(2, 0));
         buffer.insert(&"+");
@@ -59,6 +61,7 @@ mod buffer_tests {
     fn should_delete_with_multiple_cursor() {
         let mut buffer = Buffer::default();
         buffer.insert(&"123\n456\n789");
+        buffer.move_cursor(Position::new(0, 0));
         buffer.add_cursor(Position::new(1, 0));
         buffer.add_cursor(Position::new(2, 0));
         buffer.delete();
