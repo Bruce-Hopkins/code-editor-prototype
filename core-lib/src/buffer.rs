@@ -66,9 +66,11 @@ impl Buffer {
     pub fn insert<T>(&mut self, value: &T)
     where T: ToString + 'static {
         let value = value.to_string();
-        for selection in self.selections.get_all() {
+        for (i, selection) in self.selections.get_all().into_iter().enumerate() {
             if selection.is_empty() {
                 let document_change = DocumentChange::Insert(value.clone(), selection.end());
+                let selection = self.selections.get_mut(i).unwrap();
+                selection.move_cursor_to_end_of_insert(&value);
                 self.doc_change(document_change);
             }
             else {

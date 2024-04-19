@@ -24,6 +24,17 @@ mod buffer_tests {
     }
 
     #[test]
+    fn should_insert_multiple_character_at_cursor() {
+        let mut buffer = Buffer::default();
+        buffer.insert(&"1");
+        buffer.insert(&"2");
+        buffer.insert(&"3");
+
+        assert_eq!(&buffer.to_string(), "123")
+    }
+
+
+    #[test]
     fn should_delete_at_selection() {
         let mut buffer = Buffer::default();
         buffer.insert(&"123");

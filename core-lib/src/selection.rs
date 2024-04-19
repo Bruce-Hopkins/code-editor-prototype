@@ -185,6 +185,8 @@ impl SelectionList {
      */
     pub fn push(&mut self, new_cursor: Position) {
         self.0.push(Selection::new(new_cursor));
+        self.0.sort_by(|a, b| b.0.start.cmp(&a.0.start));
+
     }
 
     /**
@@ -203,6 +205,10 @@ impl SelectionList {
         // The selection list should always have one element inside of it
         let last_selection_pos = self.0.len().saturating_sub(1);
         self.0[last_selection_pos].move_selection(pos);
+    }
+
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut Selection> {
+        self.0.get_mut(index)
     }
 
     pub fn clear(&mut self) {
