@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod buffer_tests {
     use core_lib::{buffer::Buffer, position::Position};
+    use highlighter::highlighter::{Highlighter, HighlighterConfig};
     use pretty_assertions::{assert_eq, assert_ne};
 
     #[test]
@@ -80,4 +81,22 @@ mod buffer_tests {
         assert_eq!(&buffer.to_string(), "1234")
     }
 
+
+    #[test]
+    fn should_highlight_with_insert() {
+        let code = "fn main() {}";
+        let mut buffer = Buffer::default();
+        let highlighter_config = HighlighterConfig::rust_config(&"");
+        buffer.set_highlighter(highlighter_config);
+
+        buffer.insert(&code);
+        let mut highlighter = buffer.highlighter().unwrap();
+        let highlighter_iter = highlighter.highlighter_iter();
+        assert_eq!(highlighter_iter.count(), 6);
+
+        buffer.insert(&"fn secondary() {}");
+        let mut highlighter = buffer.highlighter().unwrap();
+        assert_eq!(highlighter.highlighter_iter().count(), 12);
+
+    }
 }

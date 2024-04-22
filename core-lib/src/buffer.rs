@@ -1,13 +1,17 @@
-use highlighter::highlighter::HighlighterConfig;
+use std::usize;
 
-use crate::{document::Document, position::Position, selection::{Range, Selection, SelectionList}};
+use highlighter::highlighter::{HighlighterConfig, Highlighter, HighlightIter};
+use ropey::RopeSlice;
+use tree_sitter::InputEdit;
+
+use crate::{document::{ByteRange, Document}, position::Position, selection::{Range, Selection, SelectionList}};
 
 #[derive(Default)]
 pub struct Buffer {
     document: Document,
     selections: SelectionList,
     highlighter: Option<HighlighterConfig>,
-    // window_height: usize
+    window_height: usize
 }
 
 impl ToString for Buffer {
@@ -22,14 +26,95 @@ enum DocumentChange {
     Replace(String, Range)
 }
 
+struct HighlighterChange {
+    start_byte: usize,
+    end_byte: usize,
+    new_end_byte: usize,
+    start_pos: Position,
+    end_pos: Position,
+    new_end_pos: Position,
+}
+
+impl HighlighterChange{
+    fn from_insert(pos: usize, cursor: Position, len: usize) -> Self {
+        Self {
+            start_byte: pos,
+            end_byte: pos,
+            new_end_byte: pos.saturating_add(len),
+            end_pos: cursor,
+            start_pos: cursor,
+            new_end_pos: Position {character: cursor.character.saturating_add(len), ..cursor},
+        }
+    }
+
+    fn from_delete(byte_range: ByteRange, range: Range) -> Self {
+        Self { 
+            start_byte: byte_range.start.saturating_add(1),
+            end_byte: byte_range.end,
+            new_end_byte: byte_range.start,
+            start_pos: Position{character: range.start().character.saturating_add(1), ..range.start()},
+            end_pos: range.end(),
+            new_end_pos: range.end(),
+        }
+    }
+
+    fn from_replace(byte_range: ByteRange, range: Range, len: usize) -> Self {
+        Self { 
+            start_byte: byte_range.start,
+            end_byte: byte_range.end,
+            new_end_byte: byte_range.start.saturating_add(len),
+            end_pos: range.start(),
+            start_pos: range.end(),
+            new_end_pos: Position {character: range.start().character.saturating_add(len), ..range.start()}
+        }
+    }
+}
+
+impl Into <tree_sitter::Point> for Position {
+    fn into(self) -> tree_sitter::Point {
+        tree_sitter::Point {
+            row: self.line,
+            column: self.character
+        }
+    }
+}
+
+impl Into <tree_sitter::InputEdit> for HighlighterChange {
+    fn into(self)  -> InputEdit {
+        InputEdit { 
+            start_byte: self.start_byte, 
+            old_end_byte: self.end_byte, 
+            new_end_byte: self.new_end_byte, 
+            start_position: self.start_pos.into(), 
+            old_end_position: self.end_pos.into(), 
+            new_end_position: self.new_end_pos.into() 
+        }
+    }
+}
+
 impl Buffer {
     pub fn open(file: &str) -> Self {
         // TODO, if file extension matches the highlighter configs, create a new highlighter.
         Self {
             document: Document::open(file).unwrap(),
             selections: SelectionList::default(),
-            highlighter: None
+            highlighter: None,
+            window_height: 0
         }
+    }
+    
+
+    pub fn highlighter<'a>(&'a self) -> Option<Highlighter<'a>> {
+        if let Some(highlighter) = self.highlighter.as_ref() {
+            return Some(Highlighter::new(highlighter, 0..usize::MAX, 
+                &self.document
+            ))
+        }
+        None
+    }
+
+    pub fn set_highlighter(&mut self, highlighter: HighlighterConfig) {
+        self.highlighter = Some(highlighter);
     }
 
     /**
@@ -38,13 +123,42 @@ impl Buffer {
     fn doc_change(&mut self, document_change: DocumentChange) {
         match document_change {
             DocumentChange::Insert(value, pos) => {
+                let insert_len = value.len();
                 let bytes = self.document.insert(&pos, value);
+                if let (Some(bytes), Some(highlighter)) = (bytes, self.highlighter.as_mut()) {
+                    let highlighter_change = HighlighterChange::from_insert(bytes, pos, insert_len);
+                    highlighter.edit(&highlighter_change.into(), &self.document.slice_all());
+                }
+
             },
             DocumentChange::Delete(range) => {
                 let bytes = self.document.delete(&range);
+                match bytes {
+                    Ok(bytes) => {
+                        if let (Some(bytes), Some(highlighter)) = (bytes, self.highlighter.as_mut()) {
+                            let highlighter_change = HighlighterChange::from_delete(bytes, range);
+                            highlighter.edit(&highlighter_change.into(), &self.document.slice_all())
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to run delete in the document {:?}", e);
+                    }
+                }
             },
             DocumentChange::Replace(value, range) => {
+                let insert_len = value.len();
                 let bytes = self.document.replace(&range, value);
+                match bytes {
+                    Ok(bytes) => {
+                        if let (Some(bytes), Some(highlighter)) = (bytes, self.highlighter.as_mut()) {
+                            let highlighter_change = HighlighterChange::from_replace(bytes, range, insert_len);
+                            highlighter.edit(&highlighter_change.into(), &self.document.slice_all())
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to run replace in the document {:?}", e);
+                    }
+                }
             },
         }
     }

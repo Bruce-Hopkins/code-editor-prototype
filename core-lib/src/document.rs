@@ -77,11 +77,12 @@ impl Document {
         Some(&self.file_data.as_ref()?.uri)
     }
 
+
     pub fn filename(&self) -> Option<&String> {
         Some(&self.file_data.as_ref()?.name)
     }
 
-    pub fn slice_all(&self) -> RopeSlice {
+    pub fn slice_all<'a>(&'a self) -> RopeSlice<'a> {
         self.rope.slice(..)
     }
 
