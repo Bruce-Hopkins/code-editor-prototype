@@ -8,6 +8,7 @@ pub struct HighlighterConfig {
     parser: Parser,
 }
 
+
 impl HighlighterConfig {
     pub fn new(tree: Tree, query: Query, parser: Parser) -> Self {
         Self {
@@ -33,7 +34,7 @@ impl HighlighterConfig {
         Self::new(tree, query, parser)
     }
 
-    fn edit(&mut self, input: &InputEdit, content: &RopeSlice) {
+    pub fn edit(&mut self, input: &InputEdit, content: &RopeSlice) {
         self.tree.edit(input);
         let tree = self.parser.parse(content.to_string(), Some(&self.tree));
         self.tree = tree.unwrap()
@@ -97,8 +98,8 @@ pub struct Highlighter<'tree> {
 }
 
 impl <'tree> Highlighter<'tree> {
-    pub fn new<T>(config: &'tree HighlighterConfig, range: ops::Range<usize>, content: &T) -> Self
-    where T: 'static + ToString {
+    pub fn new<T>(config: &'tree HighlighterConfig, range: ops::Range<usize>, content: &'tree T) -> Self
+    where T: 'tree + ToString {
         let mut cursor = QueryCursor::new();
         cursor.set_byte_range(range);
 
