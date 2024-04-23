@@ -10,3 +10,4 @@ pub mod buffer;
 pub mod tab;
 pub mod diagnostics;
 pub mod errors;
+pub mod undo;
