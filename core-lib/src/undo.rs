@@ -64,44 +64,57 @@ impl Undo {
         }
     }
 
-    pub fn redo(&mut self) -> Option<TextChange> {
+    pub fn redo(&mut self) -> Option<UndoItem> {
         if let Some(result) = self.redo_stack.pop() {
             let result = result.reverse();
             self.undo_stack.push(result.clone());
-            return Some(result)
+            return Some(result.into())
         }
         None
     }
 
-    pub fn undo(&mut self) -> Option<TextChange> {
+    pub fn undo(&mut self) -> Option<UndoItem> {
         if let Some(result) = self.undo_stack.pop() {
             let result = result.reverse();
             self.redo_stack.push(result.clone());
-            return Some(result)
+            return Some(result.into())
         }
         None
     }
+
 }
 
-struct UndoStack(VecDeque<TextChange>);
+struct UndoStack {
+    stack: VecDeque<TextChange>,
+    capacity: usize
+}
 impl UndoStack{
 
     fn new(capacity:usize) -> Self {
-        Self(VecDeque::with_capacity(capacity))
+        Self {
+            stack: VecDeque::with_capacity(capacity),
+            capacity
+        }
     }
 
     fn push(&mut self, change:TextChange) {
-        self.0.push_front(change);
+        // If the items reach capacity, then we remove the earlier item
+        if self.stack.len() == self.capacity {
+            self.stack.pop_back();
+        }
+        self.stack.push_front(change);
     }
 
     fn pop(&mut self) -> Option<TextChange> {
-        self.0.pop_front()
+        self.stack.pop_front()
     }
 
     fn clear(&mut self) {
-        self.0.clear()
+        self.stack.clear()
     }
 }
+
+
 
 #[derive(Clone)]
 pub enum TextChange {
@@ -135,3 +148,44 @@ impl TextChange {
         self
     }
 }
+
+impl Into<UndoItem> for TextChange {
+    fn into(self) -> UndoItem {
+        match self {
+            TextChange::Insert(position, text) => UndoItem::Insert(position, text),
+            TextChange::Delete(range, _) => UndoItem::Delete(range),
+            TextChange::Replace { range, text, text_being_replaced: _ } => UndoItem::Replace(range, text),
+        }
+    }
+}
+
+pub enum UndoItem {
+    Insert(Position,String),
+    Delete(Range),
+    Replace(Range, String)
+}
+
+#[cfg(test)]
+mod undo_stack_test {
+    use crate::position::Position;
+    use pretty_assertions::{assert_eq, assert_ne};
+    use super::{TextChange, Undo, UndoStack};
+
+    #[test]
+    fn should_not_insert_over_capacity() {
+        let mut stack = UndoStack::new(2);
+        stack.push(TextChange::Insert(Position::default(), String::from("1")));
+        stack.push(TextChange::Insert(Position::default(), String::from("2")));
+        stack.push(TextChange::Insert(Position::default(), String::from("3")));
+
+        assert_eq!(stack.stack.len(), 2);
+
+        let text_change = stack.stack.pop_back().unwrap();
+        if let TextChange::Insert(pos, text) = text_change {
+            assert_eq!(text, "2")
+        }
+        else {
+            panic!("Not correct text change value");
+        }
+    }
+} 
