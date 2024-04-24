@@ -13,9 +13,9 @@ mod undo_tests {
         undo.add(String::from("456"), Position::new(0, 3));
         undo.push();
 
-        if let TextChange::Delete {range, text } = undo.undo() {
+        if let TextChange::Delete(range, text)= undo.undo().unwrap() {
             assert_eq!(text, String::from("456"));
-            assert_eq!(range, Range::new(Position::new(0, 2), Position::new(0, 5)));
+            assert_eq!(range, Range::new(Position::new(0, 3), Position::new(0, 6)));
         }
         else {
             panic!("Incorrect text change type");
@@ -34,7 +34,7 @@ mod undo_tests {
 
         undo.undo();
         
-        if let TextChange::Insert { position, text } = undo.redo() {
+        if let TextChange::Insert (position, text) = undo.redo().unwrap() {
             assert_eq!(text, String::from("456"));
             assert_eq!(position, Position::new(0, 3));
         }
@@ -54,13 +54,12 @@ mod undo_tests {
         undo.delete(String::from("123"), Range::new(Position::new(0, 0), Position::new(0,2)));
         undo.push();
 
-        undo.undo();
-
-        if let TextChange::Insert { position, text } = undo.undo() {
-            assert_eq!(text, String::from("456"));
-            assert_eq!(position, Position::new(0, 3));
+        if let TextChange::Insert (position, text) = undo.undo().unwrap() {
+            assert_eq!(text, String::from("123"));
+            assert_eq!(position, Position::new(0, 0));
         }
         else {
+
             panic!("Incorrect text change type");
         }
     }
@@ -72,19 +71,17 @@ mod undo_tests {
         undo.add(String::from("123"), Position::new(0, 0));
         undo.push();
     
-        undo.replace(String::from("456"), Range::new(Position::new(0, 0), Position::new(0,2)));
+        undo.replace(String::from("456"), String::from("123"), Range::new(Position::new(0, 0), Position::new(0,2)));
         undo.push();
 
-        undo.undo();
-
-        if let TextChange::Replace{range, text } = undo.undo() {
+        if let TextChange::Replace{range, text, text_being_replaced} = undo.undo().unwrap() {
             assert_eq!(text, String::from("123"));
             assert_eq!(range, Range::new(Position::new(0, 0), Position::new(0,2)));
         }
         else {
             panic!("Incorrect text change type");
         }
-        if let TextChange::Replace{range, text } = undo.redo() {
+        if let TextChange::Replace{range, text, text_being_replaced} = undo.redo().unwrap() {
             assert_eq!(text, String::from("456"));
             assert_eq!(range, Range::new(Position::new(0, 0), Position::new(0,2)));
         }

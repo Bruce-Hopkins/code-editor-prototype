@@ -140,6 +140,11 @@ impl Range {
         self.start
     }
 
+    pub fn extend_end(&mut self, pos:Position) {
+        self.end.move_by(pos);
+    }
+
+
     pub fn end(&self) -> Position {
         self.end
     }
