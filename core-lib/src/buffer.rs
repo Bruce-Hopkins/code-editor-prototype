@@ -4,13 +4,14 @@ use highlighter::highlighter::{HighlighterConfig, Highlighter, HighlightIter};
 use ropey::RopeSlice;
 use tree_sitter::InputEdit;
 
-use crate::{document::{ByteRange, Document}, position::Position, selection::{Range, Selection, SelectionList}};
+use crate::{document::{ByteRange, Document}, position::Position, selection::{Range, Selection, SelectionList}, undo::Undo};
 
 #[derive(Default)]
 pub struct Buffer {
     document: Document,
     selections: SelectionList,
     highlighter: Option<HighlighterConfig>,
+    undo: Undo,
     window_height: usize
 }
 
@@ -99,7 +100,8 @@ impl Buffer {
             document: Document::open(file).unwrap(),
             selections: SelectionList::default(),
             highlighter: None,
-            window_height: 0
+            window_height: 0,
+            undo: Undo::new(100),
         }
     }
     

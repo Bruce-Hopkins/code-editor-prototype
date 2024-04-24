@@ -4,6 +4,7 @@ use std::result;
 use crate::position::{self, Position};
 use crate::selection::Range;
 
+#[derive(Default)]
 pub struct Undo {
     undo_stack: UndoStack,
     redo_stack: UndoStack,
@@ -83,10 +84,18 @@ impl Undo {
     }
 
 }
-
 struct UndoStack {
     stack: VecDeque<TextChange>,
     capacity: usize
+}
+
+impl Default for UndoStack {
+    fn default() -> Self {
+        Self { 
+            stack: VecDeque::with_capacity(50), 
+            capacity: 50 
+        }
+    }
 }
 impl UndoStack{
 
