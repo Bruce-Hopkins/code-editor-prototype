@@ -7,10 +7,10 @@ mod undo_tests {
     #[test]
     fn should_undo() {
         let mut undo = Undo::new(10);
-        undo.add(String::from("123"), Position::new(0, 0));
+        undo.insert(String::from("123"), Position::new(0, 0));
         undo.push();
     
-        undo.add(String::from("456"), Position::new(0, 3));
+        undo.insert(String::from("456"), Position::new(0, 3));
         undo.push();
 
         if let UndoItem::Delete(range)= undo.undo().unwrap() {
@@ -25,8 +25,8 @@ mod undo_tests {
     #[test]
     fn should_undo_multiple_adds() {
         let mut undo = Undo::new(10);
-        undo.add(String::from("123"), Position::new(0, 0));
-        undo.add(String::from("456"), Position::new(0, 3));
+        undo.insert(String::from("123"), Position::new(0, 0));
+        undo.insert(String::from("456"), Position::new(0, 3));
         undo.push();
 
         if let UndoItem::Delete(range)= undo.undo().unwrap() {
@@ -40,7 +40,7 @@ mod undo_tests {
     #[test]
     fn should_undo_multiple_deletes() {
         let mut undo = Undo::new(10);
-        undo.add("123456".to_string(), Position::new(0, 0));
+        undo.insert("123456".to_string(), Position::new(0, 0));
         undo.delete("123".to_string(), Range::new(Position::new(0, 0), Position::new(0, 3)));
         undo.delete("456".to_string(), Range::new(Position::new(0, 0), Position::new(0, 3)));
         undo.push();
@@ -58,10 +58,10 @@ mod undo_tests {
     fn should_redo() {
 
         let mut undo = Undo::new(10);
-        undo.add(String::from("123"), Position::new(0, 0));
+        undo.insert(String::from("123"), Position::new(0, 0));
         undo.push();
     
-        undo.add(String::from("456"), Position::new(0, 3));
+        undo.insert(String::from("456"), Position::new(0, 3));
         undo.push();
 
         undo.undo();
@@ -80,7 +80,7 @@ mod undo_tests {
     fn should_undo_delete() {
 
         let mut undo = Undo::new(10);
-        undo.add(String::from("123"), Position::new(0, 0));
+        undo.insert(String::from("123"), Position::new(0, 0));
         undo.push();
     
         undo.delete(String::from("123"), Range::new(Position::new(0, 0), Position::new(0,2)));
@@ -100,7 +100,7 @@ mod undo_tests {
     fn should_undo_replace() {
 
         let mut undo = Undo::new(10);
-        undo.add(String::from("123"), Position::new(0, 0));
+        undo.insert(String::from("123"), Position::new(0, 0));
         undo.push();
     
         undo.replace(String::from("456"), String::from("123"), Range::new(Position::new(0, 0), Position::new(0,2)));
@@ -125,13 +125,13 @@ mod undo_tests {
     #[test]
     fn undo_should_not_store_more_than_capacity() {
         let mut undo = Undo::new(2);
-        undo.add(String::from("1"), Position::new(0, 0));
+        undo.insert(String::from("1"), Position::new(0, 0));
         undo.push();
 
-        undo.add(String::from("2"), Position::new(0, 0));
+        undo.insert(String::from("2"), Position::new(0, 0));
         undo.push();
         
-        undo.add(String::from("3"), Position::new(0, 0));
+        undo.insert(String::from("3"), Position::new(0, 0));
         undo.push();
 
     }

@@ -243,7 +243,13 @@ impl Document {
             Some(value) => value,
             None => return Ok(None),
         };
-        let end_idx = self.get_character_pos_or_end_of_rope(end_pos);
+        let end_idx = self.get_character_pos(end_pos).map_or(
+            Err(EngineErrors::InvalidPosition { 
+                operation_name: "Delete".to_string(), 
+                explaination: "The positions passed are out of range".to_string() 
+            }), |value| {
+                Ok(value)
+            })?;
 
         if start_idx > end_idx {
             return Err(
@@ -255,7 +261,7 @@ impl Document {
         }
 
         if start_line.len_chars() != 0 && start_idx != end_idx {
-            self.rope.remove(start_idx..end_idx);
+            self.rope.remove(start_idx..end_idx); // TODO Change this to try remove
             self.is_saved = false;
             return Ok(Some(ByteRange{start: start_idx, end: end_idx}));
         }

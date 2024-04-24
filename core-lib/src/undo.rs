@@ -22,7 +22,8 @@ impl Undo {
         }
     }
 
-    pub fn add(&mut self, text:String, position: Position) {
+    pub fn insert(&mut self, text:String, position: Position) {
+        // TODO if text length is greater than 1 than we should just push. Also if the space character is inserted, we push too.
         self.replace_current_item(TextChange::Insert(position, text));
         self.undo_stack.clear();
     }
@@ -54,9 +55,9 @@ impl Undo {
         self.replace_current_item(TextChange::Delete(range, text))
     }
 
-    pub fn replace(&mut self, text:String, text_being_replaced: String, range: Range) {
+    pub fn replace(&mut self, text:String, doomed_text: String, range: Range) {
         self.push();
-        self.undo_stack.push(TextChange::Replace{range, text, text_being_replaced})
+        self.undo_stack.push(TextChange::Replace{range, text, text_being_replaced: doomed_text})
     }
 
     pub fn push(&mut self) {

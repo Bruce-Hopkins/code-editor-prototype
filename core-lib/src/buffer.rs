@@ -119,6 +119,26 @@ impl Buffer {
         self.highlighter = Some(highlighter);
     }
 
+    // fn get_selected_text(&self) -> Vec<String> {
+    //     let mut selected_text = Vec::new();
+    //     for selection in self.selections.get_all() {
+    //         let range = selection.range();
+    //         let start_bytes = self.document.get_line_bytes(range.start().line) + range.end().character;
+    //         let end_bytes = self.document.get_line_bytes(selection.end().line) + selection.end().character;
+    
+    //         let slice = self.document.str_from_range(start_bytes, end_bytes);
+    //         selected_text.push(slice.to_string());
+    //     }
+    //     selected_text
+    // }
+
+    fn get_text_in_range(&self, range: &Range) -> String {
+        let start_bytes = self.document.get_line_bytes(range.start().line) + range.end().character;
+        let end_bytes = self.document.get_line_bytes(range.end().line) + range.end().character;
+        let slice = self.document.str_from_range(start_bytes, end_bytes);
+        slice.to_string()
+    }
+
     /**
      * A central method for all document changes.
      */
@@ -126,18 +146,26 @@ impl Buffer {
         match document_change {
             DocumentChange::Insert(value, pos) => {
                 let insert_len = value.len();
-                let bytes = self.document.insert(&pos, value);
+                let bytes = self.document.insert(&pos, value.clone());
+
+
                 if let (Some(bytes), Some(highlighter)) = (bytes, self.highlighter.as_mut()) {
+                    self.undo.insert(value, pos);
+
                     let highlighter_change = HighlighterChange::from_insert(bytes, pos, insert_len);
                     highlighter.edit(&highlighter_change.into(), &self.document.slice_all());
                 }
 
             },
             DocumentChange::Delete(range) => {
+                let doomed_text = self.get_text_in_range(&range);
                 let bytes = self.document.delete(&range);
+
                 match bytes {
                     Ok(bytes) => {
                         if let (Some(bytes), Some(highlighter)) = (bytes, self.highlighter.as_mut()) {
+                            self.undo.delete(doomed_text, range);
+
                             let highlighter_change = HighlighterChange::from_delete(bytes, range);
                             highlighter.edit(&highlighter_change.into(), &self.document.slice_all())
                         }
@@ -149,10 +177,14 @@ impl Buffer {
             },
             DocumentChange::Replace(value, range) => {
                 let insert_len = value.len();
-                let bytes = self.document.replace(&range, value);
+                let doomed_text = self.get_text_in_range(&range);
+
+                let bytes = self.document.replace(&range, value.clone());
                 match bytes {
                     Ok(bytes) => {
                         if let (Some(bytes), Some(highlighter)) = (bytes, self.highlighter.as_mut()) {
+                            self.undo.replace(value, doomed_text, range);
+
                             let highlighter_change = HighlighterChange::from_replace(bytes, range, insert_len);
                             highlighter.edit(&highlighter_change.into(), &self.document.slice_all())
                         }
@@ -185,13 +217,18 @@ impl Buffer {
         for (i, selection) in self.selections.get_all().into_iter().enumerate() {
             if selection.is_empty() {
                 let document_change = DocumentChange::Insert(value.clone(), selection.end());
+
                 let selection = self.selections.get_mut(i).unwrap();
                 selection.move_cursor_to_end_of_insert(&value);
+
                 self.doc_change(document_change);
             }
             else {
                 let range = selection.range();
                 let document_change = DocumentChange::Replace(value.clone(), range);
+
+                let selection = self.selections.get_mut(i).unwrap();
+                selection.move_cursor_to_end_of_insert(&value);
 
                 self.doc_change(document_change);
             }
