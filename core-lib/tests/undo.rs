@@ -21,6 +21,39 @@ mod undo_tests {
         }
     }
 
+
+    #[test]
+    fn should_undo_multiple_adds() {
+        let mut undo = Undo::new(10);
+        undo.add(String::from("123"), Position::new(0, 0));
+        undo.add(String::from("456"), Position::new(0, 3));
+        undo.push();
+
+        if let UndoItem::Delete(range)= undo.undo().unwrap() {
+            assert_eq!(range, Range::new(Position::new(0, 0), Position::new(0, 6)));
+        }
+        else {
+            panic!("Incorrect text change type");
+        }
+    }
+
+    #[test]
+    fn should_undo_multiple_deletes() {
+        let mut undo = Undo::new(10);
+        undo.add("123456".to_string(), Position::new(0, 0));
+        undo.delete("123".to_string(), Range::new(Position::new(0, 0), Position::new(0, 3)));
+        undo.delete("456".to_string(), Range::new(Position::new(0, 0), Position::new(0, 3)));
+        undo.push();
+
+        if let UndoItem::Insert(pos, text)= undo.undo().unwrap() {
+            assert_eq!(pos, Position::new(0, 0));
+            assert_eq!(text, "123456");
+        }
+        else {
+            panic!("Incorrect text change type");
+        }
+    }
+
     #[test]
     fn should_redo() {
 

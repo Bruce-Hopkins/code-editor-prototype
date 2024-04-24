@@ -37,9 +37,8 @@ impl Undo {
                 return
             }
             else if let (TextChange::Delete(current_item_range, current_item_text), TextChange::Delete(item_range, change_text)) = (current_item.as_mut(), &change) {
-                let start = std::cmp::min(current_item_range.start(), item_range.start());
-                let end = std::cmp::max(current_item_range.end(), item_range.end());
-                *current_item_range = Range::new(start, end);
+                let end = current_item_range.end().move_by(item_range.end());
+                *current_item_range = Range::new(current_item_range.start(), end);
 
                 // For now we assume that the text is being deletion is happening without backspace
                 current_item_text.push_str(&change_text);
@@ -47,6 +46,7 @@ impl Undo {
             }
 
         }
+        self.push();
         self.current_item = Some(change)
     }
 
