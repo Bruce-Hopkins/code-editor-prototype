@@ -155,6 +155,7 @@ impl Document {
     }
 
     pub fn str_from_range(&self, start: usize, end: usize) -> RopeSlice<'_> {
+        // TODO, change this to the non-panicing version
         self.rope.slice(start..end)
     }
 

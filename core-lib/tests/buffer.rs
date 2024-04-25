@@ -97,6 +97,76 @@ mod buffer_tests {
         buffer.insert(&"fn secondary() {}");
         let mut highlighter = buffer.highlighter().unwrap();
         assert_eq!(highlighter.highlighter_iter().count(), 12);
+    }
 
+    #[test]
+    fn should_undo_buffer_insert() {
+        let mut buffer = Buffer::default();
+        buffer.insert(&"123");
+        buffer.undo();
+
+        assert_eq!(buffer.to_string(), "");
+    }
+
+    #[test]
+    fn should_redo_buffer_insert() {
+        let mut buffer = Buffer::default();
+        buffer.insert(&"123");
+        buffer.undo();
+        buffer.redo();
+        assert_eq!(buffer.to_string(), "123");
+    }
+
+
+    #[test]
+    fn should_undo_buffer_delete() {
+        let mut buffer = Buffer::default();
+        buffer.insert(&"123");
+        buffer.move_cursor(Position::new(0, 0));
+        buffer.move_selection(Position::new(0, 3));
+
+        buffer.delete();
+        buffer.undo();
+
+        assert_eq!(buffer.to_string(), "123");
+    }
+
+
+    #[test]
+    fn should_redo_buffer_delete() {
+        let mut buffer = Buffer::default();
+        buffer.insert(&"123");
+        buffer.move_cursor(Position::new(0, 0));
+        buffer.move_selection(Position::new(0, 3));
+        buffer.delete();
+        buffer.undo();
+        buffer.redo();
+
+        assert_eq!(buffer.to_string(), "");
+    }
+
+    #[test]
+    fn should_undo_buffer_replace() {
+        let mut buffer = Buffer::default();
+        buffer.insert(&"123");
+        buffer.move_cursor(Position::new(0, 0));
+        buffer.move_selection(Position::new(0, 3));
+        buffer.insert(&"456");
+        buffer.undo();
+
+        assert_eq!(buffer.to_string(), "123");
+    }
+
+    #[test]
+    fn should_redo_buffer_replace() {
+        let mut buffer = Buffer::default();
+        buffer.insert(&"123");
+        buffer.move_cursor(Position::new(0, 0));
+        buffer.move_selection(Position::new(0, 3));
+        buffer.insert(&"456");
+        buffer.undo();
+        buffer.redo();
+
+        assert_eq!(buffer.to_string(), "456");
     }
 }

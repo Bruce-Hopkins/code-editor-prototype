@@ -4,7 +4,7 @@ use highlighter::highlighter::{HighlighterConfig, Highlighter, HighlightIter};
 use ropey::RopeSlice;
 use tree_sitter::InputEdit;
 
-use crate::{document::{ByteRange, Document}, position::Position, selection::{Range, Selection, SelectionList}, undo::Undo};
+use crate::{document::{ByteRange, Document}, position::{self, Position}, selection::{Range, Selection, SelectionList}, undo::{self, Undo, UndoItem}};
 
 #[derive(Default)]
 pub struct Buffer {
@@ -133,8 +133,9 @@ impl Buffer {
     // }
 
     fn get_text_in_range(&self, range: &Range) -> String {
-        let start_bytes = self.document.get_line_bytes(range.start().line) + range.end().character;
+        let start_bytes = self.document.get_line_bytes(range.start().line) + range.start().character;
         let end_bytes = self.document.get_line_bytes(range.end().line) + range.end().character;
+
         let slice = self.document.str_from_range(start_bytes, end_bytes);
         slice.to_string()
     }
@@ -142,32 +143,45 @@ impl Buffer {
     /**
      * A central method for all document changes.
      */
-    fn doc_change(&mut self, document_change: DocumentChange) {
+    fn document_edit(&mut self, document_change: DocumentChange, should_undo: bool) {
         match document_change {
             DocumentChange::Insert(value, pos) => {
                 let insert_len = value.len();
                 let bytes = self.document.insert(&pos, value.clone());
 
+                if let Some(bytes) = bytes {
 
-                if let (Some(bytes), Some(highlighter)) = (bytes, self.highlighter.as_mut()) {
-                    self.undo.insert(value, pos);
-
-                    let highlighter_change = HighlighterChange::from_insert(bytes, pos, insert_len);
-                    highlighter.edit(&highlighter_change.into(), &self.document.slice_all());
+                    if should_undo {
+                        self.undo.insert(value, pos);
+                    }
+                    if let Some(highlighter) = self.highlighter.as_mut() {
+    
+                        let highlighter_change = HighlighterChange::from_insert(bytes, pos, insert_len);
+                        highlighter.edit(&highlighter_change.into(), &self.document.slice_all());
+                    }
                 }
 
             },
             DocumentChange::Delete(range) => {
-                let doomed_text = self.get_text_in_range(&range);
+                let doomed_text = if should_undo {
+                    self.get_text_in_range(&range)
+                } else {
+                    String::new()
+                };
+
                 let bytes = self.document.delete(&range);
 
                 match bytes {
                     Ok(bytes) => {
-                        if let (Some(bytes), Some(highlighter)) = (bytes, self.highlighter.as_mut()) {
-                            self.undo.delete(doomed_text, range);
+                        if let Some(bytes) = bytes {
+                            if should_undo {
+                                self.undo.delete(doomed_text, range);
+                            } 
 
-                            let highlighter_change = HighlighterChange::from_delete(bytes, range);
-                            highlighter.edit(&highlighter_change.into(), &self.document.slice_all())
+                            if let Some(highlighter) = self.highlighter.as_mut() {
+                                let highlighter_change = HighlighterChange::from_delete(bytes, range);
+                                highlighter.edit(&highlighter_change.into(), &self.document.slice_all())
+                            }
                         }
                     }
                     Err(e) => {
@@ -177,16 +191,24 @@ impl Buffer {
             },
             DocumentChange::Replace(value, range) => {
                 let insert_len = value.len();
-                let doomed_text = self.get_text_in_range(&range);
+                let doomed_text = if should_undo {
+                     self.get_text_in_range(&range)
+                } else {
+                    String::new()
+                };
+                
 
                 let bytes = self.document.replace(&range, value.clone());
                 match bytes {
                     Ok(bytes) => {
-                        if let (Some(bytes), Some(highlighter)) = (bytes, self.highlighter.as_mut()) {
-                            self.undo.replace(value, doomed_text, range);
-
-                            let highlighter_change = HighlighterChange::from_replace(bytes, range, insert_len);
-                            highlighter.edit(&highlighter_change.into(), &self.document.slice_all())
+                        if let Some(bytes) = bytes {
+                            if should_undo {
+                                self.undo.replace(value, doomed_text, range);
+                            }
+                            if let Some(highlighter) = self.highlighter.as_mut() {    
+                                let highlighter_change = HighlighterChange::from_replace(bytes, range, insert_len);
+                                highlighter.edit(&highlighter_change.into(), &self.document.slice_all())
+                            }
                         }
                     }
                     Err(e) => {
@@ -204,7 +226,7 @@ impl Buffer {
                 range = Range::new(range.start(), Position::new(range.end().line, range.end().character + 1) )
             }
             let document_change = DocumentChange::Delete(range);
-            self.doc_change(document_change);
+            self.document_edit(document_change, true);
         }
     }
 
@@ -221,7 +243,7 @@ impl Buffer {
                 let selection = self.selections.get_mut(i).unwrap();
                 selection.move_cursor_to_end_of_insert(&value);
 
-                self.doc_change(document_change);
+                self.document_edit(document_change, true);
             }
             else {
                 let range = selection.range();
@@ -230,7 +252,7 @@ impl Buffer {
                 let selection = self.selections.get_mut(i).unwrap();
                 selection.move_cursor_to_end_of_insert(&value);
 
-                self.doc_change(document_change);
+                self.document_edit(document_change, true);
             }
         }
     }
@@ -280,6 +302,41 @@ impl Buffer {
      */
     pub fn add_cursor(&mut self, pos: Position) {
         self.selections.push(pos);
+    }
+
+    /**
+     * Redos the last change in the redo stack
+     */
+    pub fn redo(&mut self) {
+        if let Some(redo_item) = self.undo.redo() {
+            self.reverse_doc_change(redo_item);
+        }
+    }
+
+    fn reverse_doc_change(&mut self, undo_item: UndoItem) {
+        match undo_item {
+            undo::UndoItem::Insert(position, text) => {
+                let doc_change = DocumentChange::Insert(text, position);
+                self.document_edit(doc_change, false);
+            },
+            undo::UndoItem::Delete(position) => {
+                let doc_change = DocumentChange::Delete(position);
+                self.document_edit(doc_change, false)
+            },
+            undo::UndoItem::Replace(range, text) => {
+                let doc_change = DocumentChange::Replace(text, range);
+                self.document_edit(doc_change, false);
+            }
+        }
+    }
+
+    /**
+     * Undos the last change in the undo stack
+     */
+    pub fn undo(&mut self) {
+        if let Some(undo_item) = self.undo.undo() {
+            self.reverse_doc_change(undo_item);
+        }
     }
 
     pub fn get_line_len(&self) {

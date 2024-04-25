@@ -25,7 +25,7 @@ impl Undo {
     pub fn insert(&mut self, text:String, position: Position) {
         // TODO if text length is greater than 1 than we should just push. Also if the space character is inserted, we push too.
         self.replace_current_item(TextChange::Insert(position, text));
-        self.undo_stack.clear();
+        self.redo_stack.clear();
     }
     
     fn replace_current_item(&mut self, change:TextChange) {
@@ -45,19 +45,20 @@ impl Undo {
                 current_item_text.push_str(&change_text);
                 return  
             }
-
         }
         self.push();
         self.current_item = Some(change)
     }
 
     pub fn delete(&mut self, text:String, range: Range) {
-        self.replace_current_item(TextChange::Delete(range, text))
+        self.replace_current_item(TextChange::Delete(range, text));
+        self.redo_stack.clear();
     }
 
     pub fn replace(&mut self, text:String, doomed_text: String, range: Range) {
         self.push();
-        self.undo_stack.push(TextChange::Replace{range, text, text_being_replaced: doomed_text})
+        self.undo_stack.push(TextChange::Replace{range, text, text_being_replaced: doomed_text});
+        self.redo_stack.clear();
     }
 
     pub fn push(&mut self) {
@@ -67,6 +68,7 @@ impl Undo {
     }
 
     pub fn redo(&mut self) -> Option<UndoItem> {
+        self.push();
         if let Some(result) = self.redo_stack.pop() {
             let result = result.reverse();
             self.undo_stack.push(result.clone());
@@ -76,6 +78,7 @@ impl Undo {
     }
 
     pub fn undo(&mut self) -> Option<UndoItem> {
+        self.push();
         if let Some(result) = self.undo_stack.pop() {
             let result = result.reverse();
             self.redo_stack.push(result.clone());
@@ -126,7 +129,7 @@ impl UndoStack{
 
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum TextChange {
     Insert(Position,String),
     Delete(Range,String),
