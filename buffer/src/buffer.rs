@@ -281,6 +281,17 @@ impl Buffer {
 
     }
 
+    pub fn is_on_tab_line(&mut self) {
+        todo!()
+    }
+
+    // /**
+    //  * Peaks what the 
+    //  */
+    // pub fn peak(&self, len: usize) {
+
+    // }
+
     /**
      * Moves one cursor to the selected location.
      * 
