@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod buffer_tests {
-    use core_lib::{buffer::Buffer, position::Position};
+    use buffer::{buffer::Buffer, position::Position};
     use highlighter::highlighter::{Highlighter, HighlighterConfig};
     use pretty_assertions::{assert_eq, assert_ne};
 

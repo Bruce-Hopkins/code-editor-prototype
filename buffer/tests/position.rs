@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod position_test {
-    use core_lib::position::Position;
+    use buffer::position::Position;
     
     #[test]
     fn position_should_be_gt() {

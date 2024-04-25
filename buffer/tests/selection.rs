@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod selection_test {
-    use core_lib::{position::Position, selection::{Range, Selection, SelectionList}};
+    use buffer::{position::Position, selection::{Range, Selection, SelectionList}};
     use pretty_assertions::{assert_eq, assert_ne};
     
     #[test]

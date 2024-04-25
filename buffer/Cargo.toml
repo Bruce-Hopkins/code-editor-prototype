@@ -1,17 +1,20 @@
 [package]
-name = "core-lib"
+name = "buffer"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+lsp-types = {workspace = true}
+tree-sitter = {workspace = true}
+unicode-segmentation = {workspace = true}
 rfd = {workspace = true}
 rustc-hash = {workspace = true}
 thiserror = {workspace = true}
+anyhow = {workspace = true}
 ropey = {workspace = true}
 highlighter = {path = "../highlighter"}
-buffer = {path = "../buffer"}
 
 [dev-dependencies]
 pretty_assertions = {workspace = true}

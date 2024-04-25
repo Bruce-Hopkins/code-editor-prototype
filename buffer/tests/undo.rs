@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod undo_tests {
     use pretty_assertions::{assert_eq, assert_ne};
-    use core_lib::{position::Position, selection::Range, undo::{TextChange, Undo, UndoItem}};
+    use buffer::{position::Position, selection::Range, undo::{TextChange, Undo, UndoItem}};
 
 
     #[test]

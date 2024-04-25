@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod document_tests {
-    use core_lib::{document::{self, Document}, position::Position, selection::Range};
+    use buffer::{document::{self, Document}, position::Position, selection::Range};
     use pretty_assertions::{assert_eq, assert_ne};
 
     #[test]

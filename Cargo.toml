@@ -1,5 +1,5 @@
 [workspace]
-members = ["core-lib", "application", "highlighter"]
+members = ["buffer", "application", "highlighter", "core-lib"]
 # default-members = ["app"]
 
 [[bin]]
@@ -10,6 +10,9 @@ path = "app/src/main.rs"
 name = "alchemy_editor"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+core-lib = "0.2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
