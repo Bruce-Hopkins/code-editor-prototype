@@ -151,12 +151,17 @@ impl Document {
         match result {
             Ok(character_pos) => return Some(character_pos.saturating_add(position.character)),
             Err(_) => None,
-        }
+        }   
     }
 
     pub fn str_from_range(&self, start: usize, end: usize) -> RopeSlice<'_> {
         // TODO, change this to the non-panicing version
         self.rope.slice(start..end)
+    }
+
+    pub fn get_str_from_range(&self, start: usize, end: usize) -> Option<RopeSlice<'_>> {
+        // TODO, change this to the non-panicing version
+        self.rope.get_slice(start..end)
     }
 
     pub fn get_line_bytes(&self, line_number: usize) -> usize {
@@ -215,7 +220,7 @@ impl Document {
      * Returns `None` if the position passed doesn't exist.
      */
     pub fn insert(&mut self, position: &Position, character: String) -> Option<usize> {
-        let start_idx = self.get_character_pos(position)?;
+        let start_idx: usize = self.get_character_pos(position)?;
         if start_idx > self.rope.len_bytes() {
             return None
         }
@@ -286,4 +291,38 @@ impl Document {
             self.rope.len_bytes()
         }
     }
+}
+
+pub struct DocumentPositionIter<'document> {
+    document: &'document Document,
+    position: Position 
+}
+
+impl <'document>DocumentPositionIter <'document> {
+    pub fn new (position: Position, document: &'document Document) -> Self {
+        DocumentPositionIter {
+           document,
+           position 
+        }
+    }
+}
+
+impl <'document> Iterator for DocumentPositionIter<'document> {
+    type Item = Position;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        self.position.character = self.position.character.saturating_add(1);
+        match self.document.get_character_pos(&self.position) {
+            Some(_) => Some(self.position),
+            None => {
+                self.position.line = self.position.line.saturating_add(1);
+                self.position.character = 0;
+                match self.document.get_character_pos(&self.position) {
+                    Some(_) => Some(self.position),
+                    None => None,
+                }
+            }
+        }
+    }
+
 }

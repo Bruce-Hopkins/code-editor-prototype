@@ -29,8 +29,17 @@ impl Editor {
         todo!()
     }
     
-    
+    fn run_command(&mut self, command_name: &str) {
+        todo!()
+    }
 
+    fn find(&mut self) {
+        todo!()
+    }
+
+    pub fn get_mut_buffer(&mut self) -> &mut Option<Buffer> {
+        &mut self.active_buffer
+    }
 }
 
 struct Tab {

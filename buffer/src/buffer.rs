@@ -4,7 +4,7 @@ use highlighter::highlighter::{HighlighterConfig, Highlighter, HighlightIter};
 use ropey::RopeSlice;
 use tree_sitter::InputEdit;
 
-use crate::{document::{ByteRange, Document}, position::{self, Position}, selection::{Range, Selection, SelectionList}, undo::{self, Undo, UndoItem}};
+use crate::{document::{ByteRange, Document, DocumentPositionIter}, position::{self, Position}, selection::{Range, Selection, SelectionList}, undo::{self, Undo, UndoItem}};
 
 #[derive(Default)]
 pub struct Buffer {
@@ -119,6 +119,10 @@ impl Buffer {
         self.highlighter = Some(highlighter);
     }
 
+    pub fn set_selections(&mut self, list: SelectionList) {
+        self.selections = list;
+    }
+
     // fn get_selected_text(&self) -> Vec<String> {
     //     let mut selected_text = Vec::new();
     //     for selection in self.selections.get_all() {
@@ -138,6 +142,10 @@ impl Buffer {
 
         let slice = self.document.str_from_range(start_bytes, end_bytes);
         slice.to_string()
+    }
+
+    pub fn doc_iter<'document>(&'document self, pos: Position) -> DocumentPositionIter {
+        DocumentPositionIter::new(pos, &self.document)
     }
 
     /**
@@ -263,6 +271,18 @@ impl Buffer {
 
     pub fn get_selection(&self) -> Vec<Selection> {
         self.selections.get_all()
+    }
+
+    /**
+     * Get's the byte number at the position
+     */
+    pub fn get_character_inx_from_position(&self, position: &Position) -> Option<usize> {
+        self.document.get_character_pos(position)
+    }
+
+    pub fn get_slice_from_pos(&self, position: &Position) -> Option<RopeSlice>  {
+        let character_idx = self.document.get_character_pos(position)?;
+        self.document.get_str_from_range(character_idx, character_idx.saturating_add(1))
     }
 
     // pub fn get_selected(&self) -> String {

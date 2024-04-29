@@ -1,3 +1,4 @@
+use buffer::{buffer::Buffer, position::Position, selection::{Selection, SelectionList}};
 use rustc_hash::FxHashMap;
 
 use crate::editor::Editor;
@@ -20,6 +21,7 @@ impl Commands {
     }
 }
 
+
 fn undo(editor: &mut Editor) {
     todo!()
 }
@@ -32,8 +34,48 @@ fn delete_line(editor: &mut Editor) {
     todo!()
 }
 
-fn next_word(editor: &mut Editor) {
-    todo!()
+fn next_word_end(editor: &mut Editor) {
+    if let Some(buffer)  = editor.get_mut_buffer() {
+        let mut selection_list = SelectionList::default();
+        for selection in buffer.get_selection() {
+            let position = selection.selection_end();
+            let mut position = Position::new(position.line, position.character.saturating_add(1));
+            position = move_until_character(position, buffer, &[' ', '\t', '\n', '(', ')']).unwrap();
+            position = move_until_next_character_is(position, buffer, &[' ', '\t', '\n', '(', ')']).unwrap();
+            selection_list.push(position);
+        }
+        buffer.set_selections(selection_list)
+    }
+}
+
+fn move_until_character(character_pos: Position, buffer: &Buffer, charcter_list: &[char]) -> Option<Position> {
+    let mut character_hash_map = FxHashMap::default();
+    for c in charcter_list {
+        character_hash_map.insert(c.to_string(), ());
+    }
+    for pos in buffer.doc_iter(character_pos) {
+        let ch = buffer.get_slice_from_pos(&pos).expect("Character is somehow missing");
+        let result = character_hash_map.get(&ch.to_string());
+        if result.is_none() {
+            return Some(pos)
+        }
+    }
+    None
+}
+
+fn move_until_next_character_is(character_pos: Position, buffer: &Buffer, charcter_list: &[char]) -> Option<Position> {
+    let mut character_hash_map = FxHashMap::default();
+    for c in charcter_list {
+        character_hash_map.insert(c.to_string(), ());
+    }
+    for pos in buffer.doc_iter(character_pos) {
+        let ch = buffer.get_slice_from_pos(&pos).expect("Character is somehow missing");
+        let result = character_hash_map.get(&ch.to_string());
+        if result.is_some() {
+            return Some(pos)
+        }
+    }
+    None
 }
 
 fn previous_word(editor: &mut Editor) {
@@ -76,6 +118,4 @@ fn previous_tab(editor: &mut Editor) {
     todo!()
 }
 
-fn find(editor: &mut Editor) {
-    todo!()
-}
+

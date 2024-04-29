@@ -61,6 +61,10 @@ impl Selection {
         &self.0.start
     }
 
+    pub fn selection_end(&self) -> &Position {
+        &self.0.end
+    }
+
     /*
         Returns true if the start and end values are not the same 
     */

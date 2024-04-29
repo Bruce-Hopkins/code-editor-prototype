@@ -62,6 +62,7 @@ impl Position {
         Self {line, character}
     }
 
+
     pub fn set_line(&mut self, line: usize) {
         self.line = line
     }
