@@ -1,2 +1,2 @@
 mod commands;
-mod editor;
+pub mod editor;

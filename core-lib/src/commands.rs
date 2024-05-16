@@ -1,23 +1,35 @@
+use std::collections::HashMap;
+
 use buffer::{buffer::Buffer, position::Position, selection::{Selection, SelectionList}};
 use rustc_hash::FxHashMap;
 
 use crate::editor::Editor;
 
-struct Commands(FxHashMap<String, fn(&mut Editor)>);
+pub struct Commands(FxHashMap<&'static str, fn(&mut Editor)>);
 
 impl Default for Commands {
     fn default() -> Self {
         let mut commands_list = FxHashMap::default();
-        Commands::insert(&mut commands_list, "undo", undo);
+        let commands: [(&'static str, fn(&mut Editor)); 2] = [
+            ("undo", undo),
+            ("next_word_end", next_word_end),
+        ];
+        for (command_name, command_fun) in commands {
+            Commands::insert(&mut commands_list, command_name, command_fun);
+        }
         Self(commands_list)
     }
 }
 
 impl Commands {
-    fn insert(list:&mut FxHashMap<String, fn(&mut Editor)>, name: &str,  fun:fn(&mut Editor)) {
-        if let Some(_) = list.insert(name.to_string(), fun) {
+    fn insert(list:&mut FxHashMap<&'static str, fn(&mut Editor)>, name: &'static str,  fun:fn(&mut Editor)) {
+        if let Some(_) = list.insert(name, fun) {
             eprintln!("Command with the name: '{name}' already exists. Replacing it.")
         }
+    }
+
+    pub fn get(&self, value: &str) -> Option<&fn(&mut Editor)> {
+        self.0.get(value)
     }
 }
 

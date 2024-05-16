@@ -1,13 +1,25 @@
-use std::usize;
+use std::{fs::File, path::{self, Path, PathBuf}, usize};
 
 use highlighter::highlighter::{HighlighterConfig, Highlighter, HighlightIter};
 use ropey::RopeSlice;
 use tree_sitter::InputEdit;
 
-use crate::{document::{ByteRange, Document, DocumentPositionIter}, position::{self, Position}, selection::{Range, Selection, SelectionList}, undo::{self, Undo, UndoItem}};
+use crate::{document::{ByteRange, Document, DocumentPositionIter}, errors::EngineErrors, position::{self, Position}, selection::{Range, Selection, SelectionList}, undo::{self, Undo, UndoItem}};
+
+pub enum Filepath {
+    Path(PathBuf),
+    TempPath(String)
+}
+
+impl Default for Filepath {
+    fn default() -> Self {
+        Filepath::TempPath(String::new())
+    }
+}
 
 #[derive(Default)]
 pub struct Buffer {
+    file_path: Filepath,
     document: Document,
     selections: SelectionList,
     highlighter: Option<HighlighterConfig>,
@@ -94,17 +106,35 @@ impl Into <tree_sitter::InputEdit> for HighlighterChange {
 }
 
 impl Buffer {
-    pub fn open(file: &str) -> Self {
+    pub fn open(file: &str) -> Result<Self, EngineErrors> {
+        let path = PathBuf::from(file);
+        if !path.exists() {
+            return Err(EngineErrors::FileError("File opened does not exist".to_owned()))
+        }
         // TODO, if file extension matches the highlighter configs, create a new highlighter.
-        Self {
-            document: Document::open(file).unwrap(),
+        // let path = Filepath::Path(path);
+        
+        Ok(Self {
+            document: Document::open(&path).unwrap(),
             selections: SelectionList::default(),
             highlighter: None,
             window_height: 0,
             undo: Undo::new(100),
-        }
+            file_path: Filepath::Path(path) // TODO, save with the filepath. Do not save if the file path doesn't exist.
+        })
     }
-    
+
+     pub fn new(temp_file_name: &str ) -> Self {
+        let file_path = Filepath::TempPath(temp_file_name.to_owned());
+        Self {
+            document: Document::new(),
+            selections: SelectionList::default(),
+            highlighter: None,
+            window_height: 0,
+            undo: Undo::new(100),
+            file_path,
+        }
+    }    
 
     pub fn highlighter<'a>(&'a self) -> Option<Highlighter<'a>> {
         if let Some(highlighter) = self.highlighter.as_ref() {
@@ -121,6 +151,13 @@ impl Buffer {
 
     pub fn set_selections(&mut self, list: SelectionList) {
         self.selections = list;
+    }
+
+    pub fn get_filename(&self) -> &str {
+        match &self.file_path {
+            Filepath::Path(path) => path.to_str().unwrap(),
+            Filepath::TempPath(temp_path) => &temp_path,
+        }
     }
 
     // fn get_selected_text(&self) -> Vec<String> {

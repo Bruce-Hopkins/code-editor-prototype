@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use rfd::FileDialog;
 use ropey::{Rope, RopeBuilder, RopeSlice};
 use ropey::iter::Lines;
@@ -86,16 +86,16 @@ impl Document {
         self.rope.slice(..)
     }
 
-    pub fn open(filename: &str) -> Result<Self, EngineErrors> {
+    pub fn open(filename: &Path) -> Result<Self, EngineErrors> {
         let file = File::open(filename)
         .map_err(EngineErrors::from_file_error("Open File"))?;
 
         let rope = Rope::from_reader(BufReader::new(file))
         .map_err(EngineErrors::from_file_error("Open file to rope"))?;
 
-        let uri = file_path(filename)?;
+        let uri = file_path(filename.to_str().unwrap())?;
         let file_data = FileData {
-            name:filename.to_owned(),
+            name: filename.to_str().unwrap().to_owned(),
             uri,
         };
         Ok(Self { 
@@ -115,13 +115,11 @@ impl Document {
     }
 
     pub fn save(&mut self) -> Result<(), EngineErrors> {
+        todo!();
         let filename = match self.filename() {
             Some(value) => value.to_owned(),
             None => return Err(
-                EngineErrors::FileError { 
-                    operation_name: "Save File".to_owned(), 
-                    explaination: "File path not set.".to_owned()
-                }
+                EngineErrors::FileError("Failed to save file. Filename is not set.".to_string())
             )
         };
 
