@@ -124,7 +124,7 @@ impl Buffer {
         })
     }
 
-     pub fn new(temp_file_name: &str ) -> Self {
+    pub fn new(temp_file_name: &str ) -> Self {
         let file_path = Filepath::TempPath(temp_file_name.to_owned());
         Self {
             document: Document::new(),
@@ -306,9 +306,17 @@ impl Buffer {
      * Returns a vector of selections
      */
 
-    pub fn get_selection(&self) -> Vec<Selection> {
+    pub fn get_selections(&self) -> Vec<Selection> {
         self.selections.get_all()
     }
+
+    /**
+     * Tries to move the position back on character. If the position doesn't exist, it will try the end of the line above.
+    */
+    pub fn move_back(&self, position: &Position) -> Position {
+        todo!()
+    }
+
 
     /**
      * Get's the byte number at the position
@@ -369,7 +377,7 @@ impl Buffer {
      * Adds a new cursor with the given position.
      */
     pub fn add_cursor(&mut self, pos: Position) {
-        self.selections.push(pos);
+        self.selections.add_cursor(pos);
     }
 
     /**

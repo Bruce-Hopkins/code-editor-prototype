@@ -34,7 +34,7 @@ impl Editor {
     pub fn goto(&mut self, position: Position) {
         if let Some(buffer) = self.active_buffer.as_mut() {
             let mut selections = SelectionList::default();
-            selections.push(position);
+            selections.add_cursor(position);
             buffer.set_selections(selections)
         }
     }

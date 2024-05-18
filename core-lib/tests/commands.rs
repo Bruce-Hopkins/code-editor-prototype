@@ -16,7 +16,7 @@ mod commands_tests {
         .get_buffer()
         .as_ref()
         .unwrap()
-        .get_selection();
+        .get_selections();
 
         assert_eq!(selections[0].selection_end(), &Position::new(0, 3));
         assert_eq!(selections[0].selection_start(), &Position::new(0, 3));

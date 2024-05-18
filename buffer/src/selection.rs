@@ -192,10 +192,14 @@ impl SelectionList {
         /**
      * Maintains a sorted list of cursor and adds a new cursor into the mix.
      */
-    pub fn push(&mut self, new_cursor: Position) {
+    pub fn add_cursor(&mut self, new_cursor: Position) {
         self.0.push(Selection::new(new_cursor));
         self.0.sort_by(|a, b| b.0.start.cmp(&a.0.start));
+    }
 
+    pub fn add_selection(&mut self, new_selection: Selection) {
+        self.0.push(new_selection);
+        self.0.sort_by(|a, b| b.0.start.cmp(&a.0.start));
     }
 
     /**
@@ -226,7 +230,7 @@ impl SelectionList {
 
     pub fn replace_cursor(&mut self, pos: Position) {
         self.0.truncate(0);
-        self.push(pos);
+        self.add_cursor(pos);
     }
 
 }

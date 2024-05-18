@@ -29,8 +29,8 @@ mod selection_test {
         let pos1 = Position::new(1, 0);
         let pos2 = Position::new(2, 0);
 
-        list.push(pos1);
-        list.push(pos2);
+        list.add_cursor(pos1);
+        list.add_cursor(pos2);
 
         assert_eq!(list.get_all(), vec![
             Selection::new(pos2), 

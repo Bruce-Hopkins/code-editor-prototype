@@ -35,26 +35,53 @@ impl Commands {
 
 
 fn undo(editor: &mut Editor) {
-    todo!()
+    if let Some(buffer) = editor.get_mut_buffer().as_mut() {
+        buffer.undo()
+    }
 }
 
 fn redo(editor: &mut Editor) {
-    todo!()
+    if let Some(buffer) = editor.get_mut_buffer().as_mut() {
+        buffer.redo()
+    }
 }
 
 fn delete_line(editor: &mut Editor) {
     todo!()
 }
 
+fn delete(editor: &mut Editor) {
+    if let Some(buffer) = editor.get_mut_buffer().as_mut() {
+        buffer.delete()
+    }
+}
+
+fn backspace(editor: &mut Editor) {
+    if let Some(buffer) = editor.get_mut_buffer().as_mut() {
+        let mut selection_list = SelectionList::default();
+        for selection in buffer.get_selections() {
+            if selection.is_empty() {
+                let new_pos = buffer.move_back(selection.selection_start());
+                selection_list.add_cursor(new_pos)
+            }
+            else {
+                selection_list.add_selection(selection)
+            }
+        }
+        buffer.set_selections(selection_list);
+        buffer.delete();
+    }
+}
+
 fn next_word_end(editor: &mut Editor) {
     if let Some(buffer)  = editor.get_mut_buffer() {
         let mut selection_list = SelectionList::default();
-        for selection in buffer.get_selection() {
+        for selection in buffer.get_selections() {
             let position = selection.selection_end();
             let mut position = Position::new(position.line, position.character.saturating_add(1));
             position = move_until_character(position, buffer, &[' ', '\t', '\n', '(', ')']).unwrap();
             position = move_until_next_character_is(position, buffer, &[' ', '\t', '\n', '(', ')']).unwrap();
-            selection_list.push(position);
+            selection_list.add_cursor(position);
         }
         buffer.set_selections(selection_list)
     }
@@ -89,6 +116,23 @@ fn move_until_next_character_is(character_pos: Position, buffer: &Buffer, charct
     }
     None
 }
+
+fn move_up(editor: &mut Editor) {
+    todo!()
+}
+
+fn move_down(editor: &mut Editor) {
+    todo!()
+}
+
+fn move_left(editor: &mut Editor) {
+    todo!()
+}
+
+fn move_right(editor: &mut Editor) {
+    todo!()
+}
+
 
 fn previous_word(editor: &mut Editor) {
     todo!()
