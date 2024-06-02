@@ -12,6 +12,8 @@ thiserror = {workspace = true}
 ropey = {workspace = true}
 highlighter = {path = "../highlighter"}
 buffer = {path = "../buffer"}
+mlua = { version = "0.9.6", features = ["lua54", "vendored", "unstable"] }
+dirs = "5.0"
 
 [dev-dependencies]
 pretty_assertions = {workspace = true}
