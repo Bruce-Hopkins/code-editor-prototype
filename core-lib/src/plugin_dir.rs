@@ -3,6 +3,7 @@ use std::path::PathBuf;
 pub struct PluginDir {
     path: PathBuf,
     name: String,
+    title: String,
     supported_editor_version: String,
     plugin_version: String,
     active: bool,

@@ -14,6 +14,7 @@ highlighter = {path = "../highlighter"}
 buffer = {path = "../buffer"}
 mlua = { version = "0.9.6", features = ["lua54", "vendored", "unstable"] }
 dirs = "5.0"
+toml = "0.8.14"
 
 [dev-dependencies]
 pretty_assertions = {workspace = true}

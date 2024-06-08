@@ -7,8 +7,6 @@ use dirs;
 
 use crate::{commands::Commands, plugin_dir::PluginDir};
 
-
-
 fn create_dir_if_does_not_exist(path: &Path) -> std::io::Result<()> {
     if !path.is_dir() {
         fs::create_dir(path)?
@@ -22,8 +20,6 @@ fn create_file_if_does_not_exist(path:&Path) -> std::io::Result<File> {
     }
     File::open(path)
 }
-
-
 
 #[derive(Default)]
 pub struct Editor {
@@ -54,8 +50,6 @@ impl Editor {
         }
     }
 
-    
-
     /**
      * Starts returns the editor while loading the plugins.
      */
@@ -71,7 +65,7 @@ impl Editor {
 
     fn config_dir() -> PathBuf {
         let mut config_dir = dirs::config_dir().expect("Could not find config directory");
-        config_dir.push(".alchemy");
+        config_dir.push("alchemy");
         config_dir
     }
 
@@ -131,8 +125,6 @@ impl Editor {
     fn load_script(&mut self, script: &str, is_plugin: bool) {
         todo!()
     }
-
-
 
     /**
      * Moves the cursor of the active buffer to the passed position
