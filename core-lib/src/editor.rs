@@ -63,7 +63,7 @@ impl Editor {
         editor
     }
 
-    fn config_dir() -> PathBuf {
+    pub fn config_dir() -> PathBuf {
         let mut config_dir = dirs::config_dir().expect("Could not find config directory");
         config_dir.push("alchemy");
         config_dir
