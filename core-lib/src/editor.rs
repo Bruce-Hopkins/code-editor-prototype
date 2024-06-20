@@ -1,8 +1,8 @@
-use std::{fs::{self, File, ReadDir}, io::Read, path::{self, Path, PathBuf}};
+use std::{fs::{self, File, ReadDir}, io::Read, path::{self, Path, PathBuf}, rc::Rc};
 
 use buffer::{buffer::Buffer, position::Position, selection::SelectionList};
 use rustc_hash::FxHashMap;
-use mlua::{Function, Lua, Result, Table, UserData, UserDataFields};
+use mlua::{Function, Lua, Result, Table, UserData, UserDataFields, UserDataMethods};
 use dirs;
 
 use crate::{commands::Commands, plugin_dir::PluginDir};
@@ -28,8 +28,15 @@ pub struct Editor {
     workspace: Option<PathBuf>,
     active_buffer: Option<Buffer>,
     commands: Commands,
-    lua: Lua
+    lua: Rc<Lua>,
+    keyboard_commands: FxHashMap<String, CommandOrFunction>
 }
+
+enum CommandOrFunction {
+    Command(String),
+    Function(String)
+}
+
 
 impl Editor {
     const EDITOR_VERSION: &'static str = "0.1.0";
@@ -40,7 +47,7 @@ impl Editor {
     const MAJOR_UPDATE_VERSION: &'static str = "0.1.0";
 
     fn open_directory(&mut self, path: PathBuf) {
-        if path.is_dir() {
+        if path.is_dir() { 
             self.tabs = vec![];
             self.buffers = FxHashMap::default();
             self.active_buffer = None;
@@ -69,6 +76,11 @@ impl Editor {
         config_dir
     }
 
+    fn add_editor_configuration(&mut self, config: EditorConfig) {
+        self.keyboard_commands = config.keyboard_commands;
+        self.commands = config.commands;
+    }
+
     fn load_workspace_script(&mut self, path: &Path) {
         self.load_script(todo!(), false);
         todo!()
@@ -91,7 +103,10 @@ impl Editor {
                 let path = entry.path();
                 let plugin_dir = PluginDir::new(path);
                 if plugin_dir.is_active() && plugin_dir.is_correct_verison(&Self::EDITOR_VERSION, Self::MAJOR_UPDATE_VERSION) {
-                    self.load_script(&plugin_dir.script(), true);
+                    match self.load_script(&plugin_dir.script(), true) {
+                        Ok(config) => self.add_editor_configuration(config),
+                        Err(e) => eprintln!("Failed to load script"),
+                    }
                 }
             }
         }
@@ -110,6 +125,7 @@ impl Editor {
         todo!()
     }
 
+
     fn undo(&mut self) {
         todo!()
     }
@@ -122,8 +138,15 @@ impl Editor {
         todo!()
     }
 
-    fn load_script(&mut self, script: &str, is_plugin: bool) {
-        todo!()
+    fn load_script(&self, script: &str, is_plugin: bool) -> mlua::Result<EditorConfig> {
+        let mut config = EditorConfig::new(self.lua.clone());
+        self.lua.scope(|scope| {
+            self.lua.globals().set("alchemy", scope.create_any_userdata_ref_mut(&mut config)?)?;
+            self.lua.load(script).exec()?;
+            Ok(())
+        })?;
+
+        Ok(config)
     }
 
     /**
@@ -262,4 +285,58 @@ pub enum Key {
 
     // Other keys
     Unknown, // To represent an unknown or unsupported key
+}
+struct EditorConfig {
+    keyboard_commands: FxHashMap<String, CommandOrFunction>,
+    commands: Commands,
+    lua: Rc<Lua>,
+}
+
+impl EditorConfig {
+    fn new(lua: Rc<Lua>) -> Self {
+        EditorConfig {
+            keyboard_commands: FxHashMap::default(),
+            commands: Commands::default(),
+            lua,
+        }
+    }
+    fn is_valid_keyboard_key(&self, key:&String) -> bool {
+        todo!()
+    }
+
+    // TODO Figure out how to handle ctrl and shift
+    fn is_valid_command(&self, key: &String) -> bool {
+        self.commands.hashmap().contains_key(key.to_lowercase().as_str())
+    }
+}
+
+impl UserData for EditorConfig {
+    fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+        methods.add_method_mut("add_keyboard_command", |_, this,  value: (String, String)| {
+            if !this.is_valid_keyboard_key(&value.0) {
+                return Err(mlua::Error::RuntimeError(format!("Failed to add command. Key {} does not exist.", value.0)));
+            }
+            if !this.is_valid_command(&value.1) {
+                return Err(mlua::Error::RuntimeError(format!("Failed to add command. Command {} does not exist.", value.1)));
+            }
+            this.keyboard_commands.insert(value.0, CommandOrFunction::Command(value.1));
+            return Ok(())
+        });
+        methods.add_method_mut("add_custom_keyboard_command", |_, this, value: (String, Function)| {
+            if !this.is_valid_keyboard_key(&value.0) {
+                return Err(mlua::Error::RuntimeError(format!("Failed to add command. Key {} does not exist.", value.0)));
+            }
+            let table:Option<Table>  = this.lua.globals().get(value.0.as_str())?;
+            let table = match table {
+                Some(table) => table,
+                None => {
+                    // let new_table =  
+                    let table = this.lua.create_table()?;
+                    this.lua.globals().set(value.0.as_str(), table)?;
+                    this.lua.globals().get(value.0.as_str())?
+                },
+            };
+            table.set(value.0.as_str(), value.1)
+        });
+    }
 }

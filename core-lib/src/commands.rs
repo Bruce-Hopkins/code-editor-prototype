@@ -31,6 +31,10 @@ impl Commands {
     pub fn get(&self, value: &str) -> Option<&fn(&mut Editor)> {
         self.0.get(value)
     }
+
+    pub fn hashmap(&self) -> &FxHashMap<&'static str, fn(&mut Editor)> {
+        &self.0
+    }
 }
 
 
