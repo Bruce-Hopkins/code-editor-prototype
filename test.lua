@@ -1,0 +1,1 @@
+alchemy.add_keyboard_command('a', 'undo')

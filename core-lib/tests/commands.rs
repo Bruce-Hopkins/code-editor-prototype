@@ -2,7 +2,7 @@
 mod commands_tests {
     use buffer::position::Position;
     use pretty_assertions::{assert_eq, assert_ne};
-    use core_lib::editor::Editor;
+    use core_lib::editor::{Editor, EditorConfig};
 
     #[test]
     fn should_move_next_word() {
