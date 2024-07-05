@@ -35,6 +35,10 @@ impl Commands {
     pub fn hashmap(&self) -> &FxHashMap<&'static str, fn(&mut Editor)> {
         &self.0
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 

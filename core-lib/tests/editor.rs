@@ -22,7 +22,6 @@ mod commands_tests {
 
     }
 
-
     #[test]
     fn should_find_a_unused_filename() {
         let mut editor = Editor::default();

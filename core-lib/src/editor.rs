@@ -29,7 +29,9 @@ pub struct Editor {
     active_buffer: Option<Buffer>,
     commands: Commands,
     lua: Rc<Lua>,
-    keyboard_commands: FxHashMap<String, CommandOrFunction>
+    keyboard_commands: FxHashMap<String, CommandOrFunction>,
+    activated_plugins: Vec<String>,
+    deactivated_plugins: Vec<String>
 }
 
 pub enum CommandOrFunction {
@@ -81,8 +83,10 @@ impl Editor {
         let config_dir = Self::config_dir();
         create_dir_if_does_not_exist(&config_dir).expect("Could not create config dir");
 
+        let config = editor.get_settings_config();
+        editor.change_activated_plugins(config.activated_plugins.clone(), config.deactivated_plugins.clone());
         editor.load_plugins();
-        editor.load_settings();
+        editor.add_editor_configuration(config);
         editor
     }
 
@@ -92,13 +96,10 @@ impl Editor {
         config_dir
     }
 
-    fn add_editor_configuration(&mut self, config: EditorConfig) {
-        // self.keyboard_commands = config.keyboard_commands;
-        // self.commands = config.commands;
-    }
 
     fn load_workspace_script(&mut self, path: &Path) {
-        self.load_script(todo!(), false);
+        self.load_script(todo!());
+        self.load_plugins();
         todo!()
     }
 
@@ -118,10 +119,23 @@ impl Editor {
             if let Ok(entry) = dir {
                 let path = entry.path();
                 let plugin_dir = PluginDir::new(path);
-                if plugin_dir.is_active() && plugin_dir.is_correct_verison(&Self::EDITOR_VERSION, Self::MAJOR_UPDATE_VERSION) {
-                    match self.load_script(&plugin_dir.script(), true) {
-                        Ok(config) => self.add_editor_configuration(config),
-                        Err(e) => eprintln!("Failed to load script"),
+                let is_activated_from_settings = self.activated_plugins
+                    .clone()
+                    .into_iter()
+                    .find(|act_p| act_p.as_str() == plugin_dir.name().as_str())
+                    .is_some();
+
+                let is_deactivated_from_settings = self.deactivated_plugins.clone()
+                    .into_iter()
+                    .find(|act_p| act_p.as_str() == plugin_dir.name().as_str())
+                    .is_some();
+
+                if !is_deactivated_from_settings {
+                    if (plugin_dir.is_active() || is_activated_from_settings) && plugin_dir.is_correct_verison(&Self::EDITOR_VERSION, Self::MAJOR_UPDATE_VERSION) {
+                        match self.load_script(&plugin_dir.script()) {
+                           Err(e) => eprintln!("Failed to load script"),
+                           Ok(config) => self.add_editor_configuration(config),
+                        }
                     }
                 }
             }
@@ -129,7 +143,7 @@ impl Editor {
         todo!()
     }
 
-    fn load_settings(&mut self) {
+    fn get_settings_config(&self) -> EditorConfig {
         let mut config_dir = Self::config_dir();
         config_dir.push("config.lua");
 
@@ -137,8 +151,7 @@ impl Editor {
         let mut script = String::new();
         file.read_to_string(&mut script).unwrap();
 
-        // let config_file = include_str!(config_dir);
-        todo!()
+        self.load_script(&script).unwrap()
     }
 
 
@@ -154,17 +167,28 @@ impl Editor {
         todo!()
     }
 
-    fn load_script(&self, script: &str, is_plugin: bool) -> mlua::Result<EditorConfig> {
-        // let mut config = EditorConfig::new(self.lua.clone());
-        // self.lua.scope(|scope| {
-        //     self.lua.globals().set("alchemy", scope.create_any_userdata_ref_mut(&mut config)?)?;
-        //     self.lua.load(script).exec()?;
-        //     Ok(())
-        // })?;
-
-        // Ok(config)
-        todo!()
+    fn load_script(&self, script: &str) -> mlua::Result<EditorConfig> {
+        EditorConfig::new(self.lua.clone()).load_script(script)
     }
+
+    fn add_editor_configuration(&mut self, config: EditorConfig) {
+        if !config.commands.is_empty() {
+            self.commands = config.commands;
+        }
+        if !config.keyboard_commands.is_empty() {
+            self.keyboard_commands = config.keyboard_commands;
+        }
+    }
+
+    fn change_activated_plugins(&mut self, activated_plugins: Vec<String>, deactivated_plugins: Vec<String>, )  {
+        if !activated_plugins.is_empty() || !deactivated_plugins.is_empty() {
+            if !activated_plugins.is_empty() {
+                self.activated_plugins = activated_plugins;
+            }
+            if !deactivated_plugins.is_empty() {
+                self.deactivated_plugins = deactivated_plugins;
+            }
+        }    }
 
     /**
      * Moves the cursor of the active buffer to the passed position
@@ -390,7 +414,9 @@ impl Key {
 pub struct EditorConfig {
     pub keyboard_commands: FxHashMap<String, CommandOrFunction>,
     pub commands: Commands,
-    lua: Rc<Lua>,
+    pub activated_plugins: Vec<String>,
+    pub deactivated_plugins: Vec<String>,
+    lua: Rc<Lua>
 }
 
 impl EditorConfig {
@@ -398,7 +424,9 @@ impl EditorConfig {
         EditorConfig {
             keyboard_commands: FxHashMap::default(),
             commands: Commands::default(),
-            lua,
+            activated_plugins: vec![],
+            deactivated_plugins: vec![],
+            lua
         }
     }
     fn is_valid_keyboard_key(&self, key:&str) -> bool {
@@ -428,6 +456,7 @@ impl UserData for EditorConfig {
         fields.add_field_method_get("val", |_, this| Ok(5));
     }
     fn add_methods<'lua, M: UserDataMethods<'lua, Self>>(methods: &mut M) {
+
         methods.add_method_mut("add_keyboard_command", |_, this,  value: (String, String)| {
             if !this.is_valid_keyboard_key(&value.0) {
                 return Err(mlua::Error::RuntimeError(format!("Failed to add command. Key {} does not exist.", value.0)));
@@ -438,6 +467,7 @@ impl UserData for EditorConfig {
             this.keyboard_commands.insert(value.0, CommandOrFunction::Command(value.1));
             Ok(())
         });
+
         methods.add_method_mut("add_custom_keyboard_command", |_, this, value: (String, Function)| {
             if !this.is_valid_keyboard_key(&value.0) {
                 return Err(mlua::Error::RuntimeError(format!("Failed to add command. Key {} does not exist.", value.0)));
@@ -454,5 +484,16 @@ impl UserData for EditorConfig {
             };
             table.set(value.0.as_str(), value.1)
         });
+
+        methods.add_method_mut("add_activated_plugins", |_, this, value: Vec<String>| {
+            this.activated_plugins.extend(value);
+            Ok(())
+        });
+
+        methods.add_method_mut("add_deactivated_plugins", |_, this, value: Vec<String>| {
+            this.deactivated_plugins.extend(value);
+            Ok(())
+        });
+
     }
 }
