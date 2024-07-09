@@ -4,7 +4,7 @@ members = ["buffer", "application", "highlighter", "core-lib"]
 
 [[bin]]
 name = "application"
-path = "app/src/main.rs"
+path = "application/src/main.rs"
 
 [package]
 name = "alchemy_editor"

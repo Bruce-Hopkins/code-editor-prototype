@@ -5,14 +5,7 @@ use rustc_hash::FxHashMap;
 use mlua::{Function, Lua, Result, Scope, Table, UserData, UserDataFields, UserDataMethods};
 use dirs;
 
-use crate::{commands::Commands, plugin_dir::PluginDir};
-
-fn create_dir_if_does_not_exist(path: &Path) -> std::io::Result<()> {
-    if !path.is_dir() {
-        fs::create_dir(path)?
-    }
-    Ok(())
-}
+use crate::{commands::Commands, plugin_dir::PluginDir, settings::Settings};
 
 fn create_file_if_does_not_exist(path:&Path) -> std::io::Result<File> {
     if !path.is_file() {
@@ -21,18 +14,37 @@ fn create_file_if_does_not_exist(path:&Path) -> std::io::Result<File> {
     File::open(path)
 }
 
-#[derive(Default)]
 pub struct Editor {
     tabs: Vec<Tab>,
     buffers: FxHashMap<String, Buffer>,
     workspace: Option<PathBuf>,
     active_buffer: Option<Buffer>,
-    commands: Commands,
     lua: Rc<Lua>,
-    keyboard_commands: FxHashMap<String, CommandOrFunction>,
-    activated_plugins: Vec<String>,
-    deactivated_plugins: Vec<String>
+    settings: Settings,
+    commands: Commands,
 }
+
+impl Default for Editor {
+    fn default() -> Self {
+        Self { 
+            tabs: Default::default(), 
+            buffers: Default::default(), 
+            workspace: Default::default(), 
+            active_buffer: Default::default(), 
+            lua: Default::default(),
+            commands: Default::default(),
+            settings: Settings::new(Rc::new(Lua::new()), Self::EDITOR_VERSION, Self::MAJOR_UPDATE_VERSION)
+        }
+    }
+}
+
+fn create_dir_if_does_not_exist(path: &Path) -> std::io::Result<()> {
+    if !path.is_dir() {
+        fs::create_dir(path)?
+    }
+    Ok(())
+}
+
 
 pub enum CommandOrFunction {
     Command(String),
@@ -80,26 +92,21 @@ impl Editor {
      */
     fn start() -> Self {
         let mut editor = Self::default();
-        let config_dir = Self::config_dir();
-        create_dir_if_does_not_exist(&config_dir).expect("Could not create config dir");
 
-        let config = editor.get_settings_config();
-        editor.change_activated_plugins(config.activated_plugins.clone(), config.deactivated_plugins.clone());
+        let config = editor.settings.add_script(&editor.get_settings_config());
+        if let Some(config) = config.as_ref() {
+            editor.settings.modify_active_plugins(config);
+        }
         editor.load_plugins();
-        editor.add_editor_configuration(config);
+        if let Some(config) = config {
+            editor.settings.add_editor_configuration(config);
+        }
         editor
     }
 
-    pub fn config_dir() -> PathBuf {
-        let mut config_dir = dirs::config_dir().expect("Could not find config directory");
-        config_dir.push("alchemy");
-        config_dir
-    }
-
-
     fn load_workspace_script(&mut self, path: &Path) {
-        self.load_script(todo!());
-        self.load_plugins();
+        // self.load_script(todo!());
+        // self.load_plugins();
         todo!()
     }
 
@@ -111,47 +118,20 @@ impl Editor {
         fs::read_dir(path)
     }
 
-    fn load_plugins(&mut self) {
-        let plugin_dirs = Self::get_all_plugins_directories()
-        .expect("Failed getting plugin directory");
-
-        for dir in plugin_dirs {
-            if let Ok(entry) = dir {
-                let path = entry.path();
-                let plugin_dir = PluginDir::new(path);
-                let is_activated_from_settings = self.activated_plugins
-                    .clone()
-                    .into_iter()
-                    .find(|act_p| act_p.as_str() == plugin_dir.name().as_str())
-                    .is_some();
-
-                let is_deactivated_from_settings = self.deactivated_plugins.clone()
-                    .into_iter()
-                    .find(|act_p| act_p.as_str() == plugin_dir.name().as_str())
-                    .is_some();
-
-                if !is_deactivated_from_settings {
-                    if (plugin_dir.is_active() || is_activated_from_settings) && plugin_dir.is_correct_verison(&Self::EDITOR_VERSION, Self::MAJOR_UPDATE_VERSION) {
-                        match self.load_script(&plugin_dir.script()) {
-                           Err(e) => eprintln!("Failed to load script"),
-                           Ok(config) => self.add_editor_configuration(config),
-                        }
-                    }
-                }
-            }
-        }
-        todo!()
+    pub fn config_dir() -> PathBuf {
+        let mut config_dir = dirs::config_dir().expect("Could not find config directory");
+        config_dir.push("alchemy");
+        config_dir
     }
 
-    fn get_settings_config(&self) -> EditorConfig {
+    fn get_settings_config(&self) -> String {
         let mut config_dir = Self::config_dir();
         config_dir.push("config.lua");
 
         let mut file = create_file_if_does_not_exist(&config_dir).expect("Couldn't create file");
         let mut script = String::new();
         file.read_to_string(&mut script).unwrap();
-
-        self.load_script(&script).unwrap()
+        script
     }
 
 
@@ -167,28 +147,21 @@ impl Editor {
         todo!()
     }
 
-    fn load_script(&self, script: &str) -> mlua::Result<EditorConfig> {
-        EditorConfig::new(self.lua.clone()).load_script(script)
-    }
+    fn load_plugins(&mut self) {
+        let plugin_dirs = Self::get_all_plugins_directories()
+        .expect("Failed getting plugin directory");
 
-    fn add_editor_configuration(&mut self, config: EditorConfig) {
-        if !config.commands.is_empty() {
-            self.commands = config.commands;
-        }
-        if !config.keyboard_commands.is_empty() {
-            self.keyboard_commands = config.keyboard_commands;
+        for dir in plugin_dirs {
+            if let Ok(entry) = dir {
+                let path = entry.path();
+                let plugin = PluginDir::new(path);
+                let config = self.settings.add_plugin(plugin);
+                if let Some(config) = config {
+                    self.settings.add_editor_configuration(config);
+                }
+            }
         }
     }
-
-    fn change_activated_plugins(&mut self, activated_plugins: Vec<String>, deactivated_plugins: Vec<String>, )  {
-        if !activated_plugins.is_empty() || !deactivated_plugins.is_empty() {
-            if !activated_plugins.is_empty() {
-                self.activated_plugins = activated_plugins;
-            }
-            if !deactivated_plugins.is_empty() {
-                self.deactivated_plugins = deactivated_plugins;
-            }
-        }    }
 
     /**
      * Moves the cursor of the active buffer to the passed position
