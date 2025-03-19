@@ -154,7 +154,7 @@ impl Editor {
         for dir in plugin_dirs {
             if let Ok(entry) = dir {
                 let path = entry.path();
-                let plugin = PluginDir::new(path);
+                let plugin = PluginDir::initialize(path);
                 let config = self.settings.add_plugin(plugin);
                 if let Some(config) = config {
                     self.settings.add_editor_configuration(config);
@@ -402,6 +402,12 @@ impl EditorConfig {
             lua
         }
     }
+
+    pub fn from_script(lua: Rc<Lua>, script: &str) -> Option<Self> {
+        let config = Self::new(lua).load_script(script).unwrap();
+        Some(config)
+    }
+
     fn is_valid_keyboard_key(&self, key:&str) -> bool {
         let key = Key::from_str(key);
         key.is_valid_key()
@@ -416,7 +422,7 @@ impl EditorConfig {
         let mut config = self;
         let lua = config.lua.clone();
         lua.scope(|scope| {
-            lua.globals().set("alchemy", scope.create_any_userdata_ref_mut(&mut config)?)?;
+            lua.globals().set("alchemy", scope.create_userdata_ref_mut(&mut config)?)?;
             lua.load(script).exec()?;
             Ok(())
         })?;

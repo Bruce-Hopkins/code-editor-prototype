@@ -4,25 +4,36 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 
-struct PluginConfig {
-    name: String,
-    title: String,
+pub struct PluginConfig {
+    pub name: String,
+    pub title: String,
     #[serde(rename(deserialize = "supported-editor-version"))]
-    supported_editor_version: String,
+    pub supported_editor_version: String,
 
     #[serde(rename(deserialize = "version"))]
-    plugin_version: String,
-    active: bool,
+    pub plugin_version: String,
+    pub active: bool,
 }
 
 pub struct PluginDir {
     config: PluginConfig,
-    path: PathBuf,
     script: String,
 }
 
+impl Default for PluginConfig {
+    fn default() -> Self {
+        Self { 
+            name: Default::default(), 
+            title: Default::default(), 
+            supported_editor_version: Default::default(), 
+            plugin_version: Default::default(), 
+            active: Default::default() 
+        }
+    }
+}
+
 impl PluginDir {
-    pub fn new(path: PathBuf) -> Self {
+    pub fn initialize(path: PathBuf) -> Self {
         // Open config file in dir
         let mut config_path = path.clone();
         config_path.push("config.toml");
@@ -42,7 +53,13 @@ impl PluginDir {
         let config: PluginConfig = toml::from_str(&contents).unwrap();
         Self {
             config,
-            path,
+            script
+        }
+    }
+
+    pub fn new(script: String, plugin_config: PluginConfig) -> Self {
+        Self {
+            config: plugin_config,
             script
         }
     }
@@ -55,8 +72,8 @@ impl PluginDir {
         todo!()
     }
 
-    pub fn script(&self) -> String {
-        todo!()
+    pub fn script(&self) -> &str {
+        &self.script
     }
 
     pub fn name(&self) -> String {

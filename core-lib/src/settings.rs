@@ -5,11 +5,76 @@ use rustc_hash::FxHashMap;
 
 use crate::{commands::Commands, editor::{CommandOrFunction, EditorConfig}, plugin_dir::PluginDir};
 
+pub struct SettingsBuilder {
+    user_script: Option<EditorConfig>,
+    workspace_script: Option<EditorConfig>,
+    plugins: Vec<PluginDir>,
+    lua: Rc<Lua>,
+    editor_version: &'static str,
+    major_update_version: &'static str
+}
+
+impl SettingsBuilder {
+    pub fn new(lua: Rc<Lua>, editor_version: &'static str, major_update_version: &'static str) -> Self {
+        Self { 
+            lua,
+            user_script: None, 
+            workspace_script: None, 
+            plugins: vec![],
+            editor_version,
+            major_update_version,
+        }
+    }
+    
+    pub fn add_plugin(mut self, plugin:PluginDir) -> Self {
+        self.plugins.push(plugin);
+        self
+    }
+
+    pub fn add_user_script(mut self, script: &str) -> Self {
+        self.user_script = EditorConfig::from_script(self.lua.clone(), script);
+        self
+    }
+
+    pub fn add_workspace_script(mut self, script: &str) -> Self {
+        self.workspace_script = EditorConfig::from_script(self.lua.clone(), script);
+        self
+    }
+
+    pub fn build(self) -> Settings {
+        let mut settings_builder = self;
+        let mut active_plugins = vec![];
+        let mut deactivated_plugins = vec![];
+
+        if let Some(config) = settings_builder.user_script.as_mut() {
+            active_plugins.append(&mut config.activated_plugins);
+            deactivated_plugins.append(&mut config.activated_plugins);
+        }
+        if let Some(config) = settings_builder.workspace_script.as_mut() {
+            active_plugins.append(&mut config.activated_plugins);
+            deactivated_plugins.append(&mut config.activated_plugins);            
+        }
+        let mut settings = Settings::new(settings_builder.lua, settings_builder.editor_version, settings_builder.editor_version);
+        settings.activated_plugins = active_plugins;
+        settings.deactivated_plugins = deactivated_plugins;
+        for plugin in settings_builder.plugins {
+            settings.add_plugin(plugin);
+        }
+        if let Some(user_script) = settings_builder.user_script {
+            settings.add_editor_configuration(user_script);
+        }
+        if let Some(workspace_script) = settings_builder.workspace_script {
+            settings.add_editor_configuration(workspace_script);
+        }
+        settings
+    }
+}
+
 pub struct Settings {
-    keyboard_commands: FxHashMap<String, CommandOrFunction>,
-    activated_plugins: Vec<String>,
-    deactivated_plugins: Vec<String>,
-    commands: Commands,
+    pub keyboard_commands: FxHashMap<String, CommandOrFunction>,
+    pub activated_plugins: Vec<String>,
+    pub deactivated_plugins: Vec<String>,
+    pub commands: Commands,
     lua: Rc<Lua>,
 
     editor_version: &'static str,
@@ -36,7 +101,7 @@ impl Settings {
         Some(config)
     }
 
-        /**
+    /**
      * Modifies the settings to the plugin, as long as the plugin is not `deactivated_plugins` and it is either active or within the `activated_plugins` lists
      */
     pub fn add_plugin(&mut self, plugin: PluginDir) -> Option<EditorConfig> {
