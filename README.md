@@ -1,6 +1,6 @@
 # Code Editor Prototype
 
-Currently, this editor is in pre-alpha. Missing features and bugs are expected.
+A prototype to test using Iced to build a working editor.
 
 ![](https://github.com/Bruce-Hopkins/code-editor-prototype/blob/main/images/screenshot.png?raw=true)
 
